@@ -13,12 +13,15 @@ Control flow contract (read by graph.py routers):
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any, Callable
 
-from .policy import policy_optimal, policy_text, viable_options
+from .policy import policy_optimal, policy_text
 from .tools import TOOL_SCHEMAS, SimulatedCarrierNetwork, ToolError
 from .trajectory import ToolEvent, Trajectory
+
+log = logging.getLogger("rerouting.nodes")
 
 MAX_RETRIES = 1  # retry a failed tool step once, then escalate (per spec)
 
@@ -100,6 +103,8 @@ def make_nodes(llm, network: SimulatedCarrierNetwork, traj: Trajectory) -> dict[
         te = _run_tool(network, call.name, call.arguments)
         step.tool_events.append(te)
         if not te.ok:
+            log.warning("evaluate tool failed (attempt %s): %s -> will retry/escalate",
+                        retries["evaluate"], te.error)
             step.output = {"error": te.error}
             return {"route": "retry_or_escalate", "error": te.error,
                     "stage": "evaluate", "retries": retries}
@@ -183,6 +188,8 @@ def make_nodes(llm, network: SimulatedCarrierNetwork, traj: Trajectory) -> dict[
                 # Guardrail: never book a carrier that was not offered.
                 chosen_id = exec_call.arguments.get("carrier_id")
                 if chosen_id not in offered_ids:
+                    log.warning("GUARDRAIL blocked booking of un-offered carrier_id=%s "
+                                "(offered: %s)", chosen_id, sorted(offered_ids))
                     step.tool_events.append(ToolEvent(
                         name="execute_reroute", arguments=exec_call.arguments, ok=False,
                         error=f"hallucinated_carrier_id:{chosen_id} not in offered options",
@@ -241,6 +248,8 @@ def make_nodes(llm, network: SimulatedCarrierNetwork, traj: Trajectory) -> dict[
         note = ("policy confirms no viable option -> escalation correct"
                 if opt is None else
                 "NOTE: a viable option existed; escalation may be premature")
+        log.info("ESCALATE -> human_review_needed | stage=%s | %s",
+                 state.get("stage"), note)
         step.output = {"escalation_reason": reason, "policy_check": note}
         traj.outcome = "human_review_needed"
         traj.escalation_reason = reason

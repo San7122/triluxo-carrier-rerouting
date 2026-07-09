@@ -16,12 +16,22 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import logging
 import os
 import sys
 import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Structured logging for control-flow events (retries, guardrail blocks,
+# escalations are emitted by agents.nodes under the 'rerouting' logger).
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("rerouting.runner")
 
 # make repo root importable when run as a script
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,11 +103,16 @@ def run_one(client, scenario: dict) -> Trajectory:
     )
     graph = build_graph(client, scenario, traj)
     initial = {"alert": scenario["alert"], "policy": scenario["policy"], "retries": {}}
+    log.info("run start: model=%s scenario=%s", client.label, scenario["scenario_id"])
     try:
         graph.invoke(initial, config={"recursion_limit": 25})
+        log.info("run done:  model=%s scenario=%s outcome=%s",
+                 client.label, scenario["scenario_id"], traj.outcome)
     except Exception as e:  # noqa: BLE001  -- never let one run kill the batch
         traj.outcome = "crashed"
         traj.error = f"{type(e).__name__}: {e}"
+        log.error("run CRASHED: model=%s scenario=%s error=%s",
+                  client.label, scenario["scenario_id"], traj.error)
     return traj
 
 

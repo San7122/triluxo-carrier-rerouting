@@ -1,10 +1,13 @@
 # Common flows for the carrier-rerouting assignment.
 # Reproducibility in one command each.
 
-.PHONY: install smoke run claude deck docker clean
+.PHONY: install test smoke run claude deck docker clean
 
 install:            ## Create venv + install deps
 	python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+
+test:               ## Run the unit tests (policy oracle + scorer)
+	pytest -q
 
 smoke:              ## Offline sanity check (no API key, no network)
 	python -m eval.smoke_offline
