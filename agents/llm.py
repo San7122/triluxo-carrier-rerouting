@@ -189,6 +189,7 @@ class GroqClient(LLMClient):
         if not api_key:
             raise RuntimeError("GROQ_API_KEY not set -- cannot run the open-source model.")
         self._client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+        self._rate_limit = True  # Groq free tier is TPM-capped; pace via token bucket
 
     @staticmethod
     def _to_openai_tools(tools):
@@ -246,10 +247,12 @@ class GroqClient(LLMClient):
         # Proactive pacing: reserve an estimate up front (output cap + rough
         # prompt allowance); 429 backoff remains as a safety net.
         est = max_tokens + 800
+        rate_limit = getattr(self, "_rate_limit", True)
         latency = 0.0
         resp = None
         for attempt in range(6):
-            _tpm_acquire(est)
+            if rate_limit:
+                _tpm_acquire(est)
             t0 = time.time()  # time ONLY the successful API call (excludes sleeps)
             try:
                 resp = self._client.chat.completions.create(**kwargs)
@@ -260,7 +263,8 @@ class GroqClient(LLMClient):
                     raise
                 time.sleep(min(30.0, 2.0 ** attempt) + random.random())
         actual = (resp.usage.prompt_tokens or 0) + (resp.usage.completion_tokens or 0)
-        _tpm_reconcile(est, actual)
+        if rate_limit:
+            _tpm_reconcile(est, actual)
 
         choice = resp.choices[0]
         msg = choice.message
@@ -282,12 +286,44 @@ class GroqClient(LLMClient):
         )
 
 
+# ---------------------------------------------------------------------------
+# LM Studio (open-source models, run LOCALLY) -- OpenAI-compatible local server
+# ---------------------------------------------------------------------------
+class LMStudioClient(GroqClient):
+    """Run an open model locally via LM Studio's OpenAI-compatible server.
+
+    Reuses all of GroqClient's OpenAI message/tool translation and `chat`; only
+    the endpoint changes and the TPM rate limiter is off (local => no per-minute
+    token budget). Start LM Studio -> Developer tab -> Start Server, load a
+    tool-calling capable model (e.g. a Qwen2.5-Instruct or Llama-3.1-Instruct
+    GGUF), then set LMSTUDIO_MODEL to that model's id.
+
+    Env:
+      LMSTUDIO_BASE_URL  default http://localhost:1234/v1
+      LMSTUDIO_MODEL     the model id shown in LM Studio (or 'local-model')
+      LMSTUDIO_API_KEY   optional; any non-empty string works (default 'lm-studio')
+    """
+    provider = "lmstudio"
+
+    def __init__(self, model_id: Optional[str] = None, label: Optional[str] = None):
+        from openai import OpenAI
+
+        base_url = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+        self.model_id = model_id or os.environ.get("LMSTUDIO_MODEL", "local-model")
+        self.label = label or f"lmstudio:{self.model_id}"
+        api_key = os.environ.get("LMSTUDIO_API_KEY", "lm-studio")  # value ignored by LM Studio
+        self._client = OpenAI(api_key=api_key, base_url=base_url)
+        self._rate_limit = False  # local server, no TPM cap
+
+
 def build_client(kind: str, model_id: Optional[str] = None,
                  label: Optional[str] = None) -> LLMClient:
-    """Factory used by the runner. kind in {'claude','groq'}."""
+    """Factory used by the runner. kind in {'claude','groq','lmstudio'}."""
     kind = kind.lower()
     if kind in ("claude", "anthropic"):
         return AnthropicClient(model_id=model_id, label=label)
     if kind in ("groq", "llama", "qwen", "oss"):
         return GroqClient(model_id=model_id, label=label)
+    if kind in ("lmstudio", "lm-studio", "local"):
+        return LMStudioClient(model_id=model_id, label=label)
     raise ValueError(f"unknown model kind: {kind}")

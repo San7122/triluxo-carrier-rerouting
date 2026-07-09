@@ -83,6 +83,27 @@ python -m eval.runner
 python -m eval.runner --models llama70b --scenario normal_reroute
 ```
 
+### Optional: run an open model *locally* via LM Studio (no API key)
+
+The client layer is provider-agnostic, so you can point the "open model" at a
+[LM Studio](https://lmstudio.ai) server instead of Groq:
+
+```bash
+# 1. In LM Studio: load a tool-calling-capable instruct model
+#    (e.g. Qwen2.5-7B-Instruct or Llama-3.1-8B-Instruct), then
+#    Developer tab -> Start Server (defaults to http://localhost:1234/v1).
+# 2. Point the runner at the loaded model id and run:
+LMSTUDIO_MODEL="qwen2.5-7b-instruct" python -m eval.runner --models lmstudio
+```
+
+No API key is needed and the Groq TPM rate-limiter is automatically disabled for
+the local endpoint. **Caveat:** small local models are much weaker at tool
+calling than the Groq-hosted Llamas — the whole agent runs on tool calls, so pick
+a 7B+ instruct model with solid function-calling support for a fair comparison. A
+tiny model (e.g. Gemma-2 2B) will frequently fail to emit tool calls and escalate
+to `human_review_needed`; the guardrails handle that safely, but it isn't a
+meaningful head-to-head. The benchmarked numbers below use the Groq-hosted models.
+
 Outputs after a run:
 - `eval/trajectories/<model>/<scenario>.json` — one rich, readable trajectory per run
 - `eval/trajectories/trajectories.jsonl` — one run per line (for scoring)
@@ -166,7 +187,7 @@ I hardened after a real Groq rate-limit corrupted a run.
 
 ```
 agents/          LangGraph POC
-  llm.py         provider-agnostic client (Anthropic + Groq/OpenAI-compatible)
+  llm.py         provider-agnostic client (Anthropic + Groq + LM Studio/local, OpenAI-compatible)
   tools.py       SIMULATED carrier API + tool schemas
   policy.py      reroute policy + deterministic optimal-choice oracle
   nodes.py       the agent nodes (ingest / evaluate / decide+execute / escalate)

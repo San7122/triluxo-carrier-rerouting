@@ -44,11 +44,14 @@ PRESETS: dict[str, tuple[str, str | None, str]] = {
     "llama8b": ("groq", "llama-3.1-8b-instant", "llama-3.1-8b"),
     "qwen32b": ("groq", "qwen-2.5-32b", "qwen2.5-32b"),
     "claude": ("claude", None, "claude"),
+    # Local open model via LM Studio. model_id=None -> uses $LMSTUDIO_MODEL.
+    "lmstudio": ("lmstudio", None, "lmstudio-local"),
 }
 DEFAULT_MODELS = ["llama70b", "llama8b"]
 
 
 def _key_for(kind: str) -> str | None:
+    # None => no API key required (e.g. a local LM Studio server).
     return {"groq": "GROQ_API_KEY", "claude": "ANTHROPIC_API_KEY"}.get(kind)
 
 
@@ -73,7 +76,7 @@ def available_models(requested: list[str] | None) -> list[str]:
             continue
         kind = PRESETS[m][0]
         key = _key_for(kind)
-        if key and os.environ.get(key):
+        if key is None or os.environ.get(key):  # None => no key needed (local)
             usable.append(m)
         else:
             print(f"[skip] model '{m}': {key} not set.")
