@@ -1,0 +1,226 @@
+{
+  "per_run": [
+    {
+      "scenario_id": "normal_reroute",
+      "model_label": "llama-3.3-70b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "AER-01",
+      "optimal_carrier": "AER-01",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 3,
+        "tokens": 3072,
+        "llm_latency_s": 3.15
+      }
+    },
+    {
+      "scenario_id": "tight_margin",
+      "model_label": "llama-3.3-70b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "FAS-11",
+      "optimal_carrier": "FAS-11",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 3,
+        "tokens": 3023,
+        "llm_latency_s": 2.511
+      }
+    },
+    {
+      "scenario_id": "no_viable_option",
+      "model_label": "llama-3.3-70b",
+      "outcome": "human_review_needed",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": null,
+      "optimal_carrier": null,
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 4,
+        "tokens": 3956,
+        "llm_latency_s": 3.487
+      }
+    },
+    {
+      "scenario_id": "transient_tool_failure",
+      "model_label": "llama-3.3-70b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "NOR-31",
+      "optimal_carrier": "NOR-31",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 4,
+        "tokens": 3539,
+        "llm_latency_s": 3.965
+      }
+    },
+    {
+      "scenario_id": "hard_tool_failure",
+      "model_label": "llama-3.3-70b",
+      "outcome": "human_review_needed",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": null,
+      "optimal_carrier": "ATL-41",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 5,
+        "tokens": 3616,
+        "llm_latency_s": 3.309
+      }
+    },
+    {
+      "scenario_id": "normal_reroute",
+      "model_label": "llama-3.1-8b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "AER-01",
+      "optimal_carrier": "AER-01",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "totals": {
+        "steps": 3,
+        "tokens": 3106,
+        "llm_latency_s": 2.458
+      }
+    },
+    {
+      "scenario_id": "tight_margin",
+      "model_label": "llama-3.1-8b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "BAL-12",
+      "optimal_carrier": "FAS-11",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 3,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 4.33,
+      "totals": {
+        "steps": 3,
+        "tokens": 3120,
+        "llm_latency_s": 2.316
+      }
+    },
+    {
+      "scenario_id": "no_viable_option",
+      "model_label": "llama-3.1-8b",
+      "outcome": "rerouted",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": "MID-23",
+      "optimal_carrier": null,
+      "dims": {
+        "tool_calling": 2,
+        "decision_correctness": 1,
+        "error_recovery": 1,
+        "reasoning_quality": 5
+      },
+      "overall": 2.25,
+      "totals": {
+        "steps": 3,
+        "tokens": 3016,
+        "llm_latency_s": 1.885
+      }
+    },
+    {
+      "scenario_id": "transient_tool_failure",
+      "model_label": "llama-3.1-8b",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "GUL-32",
+      "optimal_carrier": "NOR-31",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 3,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 4.5,
+      "totals": {
+        "steps": 4,
+        "tokens": 3579,
+        "llm_latency_s": 2.368
+      }
+    },
+    {
+      "scenario_id": "hard_tool_failure",
+      "model_label": "llama-3.1-8b",
+      "outcome": "human_review_needed",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": null,
+      "optimal_carrier": "ATL-41",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 4,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 4.75,
+      "totals": {
+        "steps": 5,
+        "tokens": 3742,
+        "llm_latency_s": 2.96
+      }
+    }
+  ],
+  "summary": {
+    "llama-3.3-70b": {
+      "tool_calling": 5.0,
+      "decision_correctness": 5.0,
+      "error_recovery": 5.0,
+      "reasoning_quality": 5.0,
+      "overall": 5.0,
+      "total_tokens": 17206,
+      "total_llm_latency_s": 16.42,
+      "n_scenarios": 5
+    },
+    "llama-3.1-8b": {
+      "tool_calling": 4.4,
+      "decision_correctness": 3.2,
+      "error_recovery": 3.67,
+      "reasoning_quality": 5.0,
+      "overall": 4.17,
+      "total_tokens": 16563,
+      "total_llm_latency_s": 11.99,
+      "n_scenarios": 5
+    }
+  }
+}

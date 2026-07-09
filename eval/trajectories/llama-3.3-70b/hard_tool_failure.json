@@ -1,0 +1,189 @@
+{
+  "run_id": "1d9e432f9d37",
+  "scenario_id": "hard_tool_failure",
+  "model_label": "llama-3.3-70b",
+  "provider": "groq",
+  "model_id": "llama-3.3-70b-versatile",
+  "outcome": "human_review_needed",
+  "final_decision": null,
+  "escalation_reason": "booking_gateway_rejected: carrier capacity full",
+  "error": "",
+  "totals": {
+    "steps": 5,
+    "tokens": 3616,
+    "llm_latency_s": 3.309
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-5099",
+        "event": "mechanical_failure",
+        "carrier": "BlueFreight",
+        "origin": "Rotterdam",
+        "destination": "New York",
+        "commodity": "automotive_parts",
+        "priority": "high",
+        "baseline_eta_hours": 84,
+        "eta_impact_hours": 26
+      },
+      "thought": "The disruption alert indicates a mechanical failure affecting shipment SHP-5099 from Rotterdam to New York, carried by BlueFreight. I estimate the operational severity as high due to the significant ETA impact of 26 hours and the shipment's high priority. The delay represents a substantial 31% increase to the baseline ETA, further supporting the high severity assessment. An automated reroute should be attempted to mitigate the delay and minimize the impact on the high-priority shipment.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-5099",
+          "event": "mechanical_failure",
+          "carrier": "BlueFreight",
+          "origin": "Rotterdam",
+          "destination": "New York",
+          "commodity": "automotive_parts",
+          "priority": "high",
+          "baseline_eta_hours": 84,
+          "eta_impact_hours": 26
+        },
+        "assessment": "The disruption alert indicates a mechanical failure affecting shipment SHP-5099 from Rotterdam to New York, carried by BlueFreight. I estimate the operational severity as high due to the significant ETA impact of 26 hours and the shipment's high priority. The delay represents a substantial 31% increase to the baseline ETA, further supporting the high severity assessment. An automated reroute should be attempted to mitigate the delay and minimize the impact on the high-priority shipment."
+      },
+      "llm_latency_s": 0.7755041122436523,
+      "input_tokens": 194,
+      "output_tokens": 94
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-5099",
+        "attempt": 1
+      },
+      "thought": "Evaluating the options:\n\n1. ATL-41 (AtlanticAir): cost_usd ($5100) is within the limit ($6,000), and reliability (0.93) is above the threshold (0.85). This option is policy-compliant.\n\n2. TRA-42 (TransRail): cost_usd ($2400) is within the limit ($6,000), and reliability (0.9) is above the threshold (0.85). This option is policy-compliant.\n\nRanking the compliant options:\n\n1. ATL-41 (AtlanticAir) - eta_hours: 32, reliability: 0.93\n2. TRA-42 (TransRail) - eta_hours: 66, reliability: 0.9\n\nATL-41 has the lowest eta_hours, making it the top choice. TRA-42 has a longer eta_hours but is still a compliant option.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-5099"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-5099",
+            "carriers": [
+              {
+                "carrier_id": "ATL-41",
+                "name": "AtlanticAir",
+                "mode": "air",
+                "cost_usd": 5100,
+                "eta_hours": 32,
+                "reliability": 0.93
+              },
+              {
+                "carrier_id": "TRA-42",
+                "name": "TransRail",
+                "mode": "rail",
+                "cost_usd": 2400,
+                "eta_hours": 66,
+                "reliability": 0.9
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 1.0013580322265625e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "ATL-41",
+            "name": "AtlanticAir",
+            "mode": "air",
+            "cost_usd": 5100,
+            "eta_hours": 32,
+            "reliability": 0.93
+          },
+          {
+            "carrier_id": "TRA-42",
+            "name": "TransRail",
+            "mode": "rail",
+            "cost_usd": 2400,
+            "eta_hours": 66,
+            "reliability": 0.9
+          }
+        ],
+        "assessment": "Evaluating the options:\n\n1. ATL-41 (AtlanticAir): cost_usd ($5100) is within the limit ($6,000), and reliability (0.93) is above the threshold (0.85). This option is policy-compliant.\n\n2. TRA-42 (TransRail): cost_usd ($2400) is within the limit ($6,000), and reliability (0.9) is above the threshold (0.85). This option is policy-compliant.\n\nRanking the compliant options:\n\n1. ATL-41 (AtlanticAir) - eta_hours: 32, reliability: 0.93\n2. TRA-42 (TransRail) - eta_hours: 66, reliability: 0.9\n\nATL-41 has the lowest eta_hours, making it the top choice. TRA-42 has a longer eta_hours but is still a compliant option."
+      },
+      "llm_latency_s": 1.1492340564727783,
+      "input_tokens": 1491,
+      "output_tokens": 211
+    },
+    {
+      "index": 2,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 2,
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "carrier_id": "ATL-41",
+            "shipment_id": "SHP-5099"
+          },
+          "ok": false,
+          "output": null,
+          "error": "booking_gateway_rejected: carrier capacity full",
+          "latency_s": 5.698204040527344e-05
+        }
+      ],
+      "output": {
+        "error": "booking_gateway_rejected: carrier capacity full"
+      },
+      "llm_latency_s": 0.885565996170044,
+      "input_tokens": 781,
+      "output_tokens": 32
+    },
+    {
+      "index": 3,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 2,
+        "attempt": 2
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "carrier_id": "ATL-41",
+            "shipment_id": "SHP-5099"
+          },
+          "ok": false,
+          "output": null,
+          "error": "booking_gateway_rejected: carrier capacity full",
+          "latency_s": 1.4781951904296875e-05
+        }
+      ],
+      "output": {
+        "error": "booking_gateway_rejected: carrier capacity full"
+      },
+      "llm_latency_s": 0.4990088939666748,
+      "input_tokens": 781,
+      "output_tokens": 32
+    },
+    {
+      "index": 4,
+      "node": "human_review_needed",
+      "input": {
+        "stage": "decide"
+      },
+      "thought": "",
+      "tool_events": [],
+      "output": {
+        "escalation_reason": "booking_gateway_rejected: carrier capacity full",
+        "policy_check": "NOTE: a viable option existed; escalation may be premature"
+      },
+      "llm_latency_s": 0.0,
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  ]
+}

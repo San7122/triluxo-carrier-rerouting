@@ -1,0 +1,27 @@
+{
+  "scenario_id": "transient_tool_failure",
+  "description": "The carrier API times out on the first call, then succeeds. Tests the evaluate-stage retry path: the graph should retry once and recover, then book normally.",
+  "expected_path": "ingest -> evaluate(FAIL) -> evaluate(retry, ok) -> decide_execute -> rerouted",
+  "policy": {"max_cost_usd": 6000, "min_reliability": 0.85, "objective": "minimize_eta_hours"},
+  "alert": {
+    "shipment_id": "SHP-4012",
+    "event": "weather_disruption",
+    "carrier": "BlueFreight",
+    "origin": "Mumbai",
+    "destination": "Dubai",
+    "commodity": "pharmaceuticals",
+    "priority": "high",
+    "baseline_eta_hours": 48,
+    "eta_impact_hours": 18
+  },
+  "simulation": {
+    "get_alternative_carriers": {
+      "mode": "error_then_return",
+      "carriers": [
+        {"carrier_id": "NOR-31", "name": "NorthLine Air", "mode": "air", "cost_usd": 4200, "eta_hours": 20, "reliability": 0.92},
+        {"carrier_id": "GUL-32", "name": "GulfRoad", "mode": "road", "cost_usd": 1800, "eta_hours": 44, "reliability": 0.88}
+      ]
+    },
+    "execute_reroute": {"mode": "succeed"}
+  }
+}

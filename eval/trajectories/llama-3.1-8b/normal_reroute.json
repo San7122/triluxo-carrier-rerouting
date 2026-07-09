@@ -1,0 +1,185 @@
+{
+  "run_id": "4a558b2fa92e",
+  "scenario_id": "normal_reroute",
+  "model_label": "llama-3.1-8b",
+  "provider": "groq",
+  "model_id": "llama-3.1-8b-instant",
+  "outcome": "rerouted",
+  "final_decision": {
+    "chosen_carrier_id": "AER-01",
+    "booking": {
+      "status": "confirmed",
+      "shipment_id": "SHP-1001",
+      "carrier_id": "AER-01",
+      "new_eta_hours": 30,
+      "booking_ref": "BK-2EFF50C5"
+    },
+    "rationale": ""
+  },
+  "escalation_reason": "",
+  "error": "",
+  "totals": {
+    "steps": 3,
+    "tokens": 3106,
+    "llm_latency_s": 2.458
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-1001",
+        "event": "customs_delay",
+        "carrier": "BlueFreight",
+        "origin": "Shanghai",
+        "destination": "Rotterdam",
+        "commodity": "consumer_electronics",
+        "priority": "high",
+        "baseline_eta_hours": 72,
+        "eta_impact_hours": 14
+      },
+      "thought": "Disruption: The shipment SHP-1001, carrying consumer electronics, is experiencing a customs delay with BlueFreight, resulting in a 14-hour delay from its baseline ETA of 72 hours.\n\nOperational severity: Medium, as the delay accounts for approximately 19% of the baseline ETA, impacting the shipment's timely arrival.\n\nAutomated reroute: Yes, an automated reroute should be attempted to minimize further delays and ensure timely delivery.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-1001",
+          "event": "customs_delay",
+          "carrier": "BlueFreight",
+          "origin": "Shanghai",
+          "destination": "Rotterdam",
+          "commodity": "consumer_electronics",
+          "priority": "high",
+          "baseline_eta_hours": 72,
+          "eta_impact_hours": 14
+        },
+        "assessment": "Disruption: The shipment SHP-1001, carrying consumer electronics, is experiencing a customs delay with BlueFreight, resulting in a 14-hour delay from its baseline ETA of 72 hours.\n\nOperational severity: Medium, as the delay accounts for approximately 19% of the baseline ETA, impacting the shipment's timely arrival.\n\nAutomated reroute: Yes, an automated reroute should be attempted to minimize further delays and ensure timely delivery."
+      },
+      "llm_latency_s": 0.5025708675384521,
+      "input_tokens": 194,
+      "output_tokens": 92
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-1001",
+        "attempt": 1
+      },
+      "thought": "Based on the policy, we need to check if each option satisfies the constraints:\n\n1. Cost_usd <= $6,000\n2. Reliability >= 0.85\n3. Among allowed options, choose the one with the LOWEST eta_hours (fastest recovery). Tie-break by higher reliability, then lower cost.\n\nLet's evaluate each option:\n\n1. AER-01:\n- Cost_usd: 5200 (<= $6,000)\n- Reliability: 0.94 (>= 0.85)\n- eta_hours: 30 (fastest recovery)\n- Rank: 1 (highest reliability: 0.94)\n\n2. ROA-02:\n- Cost_usd: 2100 (<= $6,000)\n- Reliability: 0.9 (>= 0.85)\n- eta_hours: 58\n- Rank: 2 (lower eta_hours than SEA-03, higher reliability than SEA-03)\n\n3. SEA-03:\n- Cost_usd: 900 (<= $6,000)\n- Reliability: 0.97 (>= 0.85)\n- eta_hours: 140\n- Rank: 3 (highest reliability, but longest eta_hours)\n\nAll three options are policy-compliant. The ranking is:\n\n1. AER-01 (eta_hours: 30, reliability: 0.94, cost: 5200)\n2. ROA-02 (eta_hours: 58, reliability: 0.9, cost: 2100)\n3. SEA-03 (eta_hours: 140, reliability: 0.97, cost: 900)\n\nNote that SEA-03 has the highest reliability, but the longest eta_hours.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-1001"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-1001",
+            "carriers": [
+              {
+                "carrier_id": "AER-01",
+                "name": "AeroSwift Air",
+                "mode": "air",
+                "cost_usd": 5200,
+                "eta_hours": 30,
+                "reliability": 0.94
+              },
+              {
+                "carrier_id": "ROA-02",
+                "name": "RoadRunner Express",
+                "mode": "road",
+                "cost_usd": 2100,
+                "eta_hours": 58,
+                "reliability": 0.9
+              },
+              {
+                "carrier_id": "SEA-03",
+                "name": "SeaLink Standard",
+                "mode": "sea",
+                "cost_usd": 900,
+                "eta_hours": 140,
+                "reliability": 0.97
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 1.9073486328125e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "AER-01",
+            "name": "AeroSwift Air",
+            "mode": "air",
+            "cost_usd": 5200,
+            "eta_hours": 30,
+            "reliability": 0.94
+          },
+          {
+            "carrier_id": "ROA-02",
+            "name": "RoadRunner Express",
+            "mode": "road",
+            "cost_usd": 2100,
+            "eta_hours": 58,
+            "reliability": 0.9
+          },
+          {
+            "carrier_id": "SEA-03",
+            "name": "SeaLink Standard",
+            "mode": "sea",
+            "cost_usd": 900,
+            "eta_hours": 140,
+            "reliability": 0.97
+          }
+        ],
+        "assessment": "Based on the policy, we need to check if each option satisfies the constraints:\n\n1. Cost_usd <= $6,000\n2. Reliability >= 0.85\n3. Among allowed options, choose the one with the LOWEST eta_hours (fastest recovery). Tie-break by higher reliability, then lower cost.\n\nLet's evaluate each option:\n\n1. AER-01:\n- Cost_usd: 5200 (<= $6,000)\n- Reliability: 0.94 (>= 0.85)\n- eta_hours: 30 (fastest recovery)\n- Rank: 1 (highest reliability: 0.94)\n\n2. ROA-02:\n- Cost_usd: 2100 (<= $6,000)\n- Reliability: 0.9 (>= 0.85)\n- eta_hours: 58\n- Rank: 2 (lower eta_hours than SEA-03, higher reliability than SEA-03)\n\n3. SEA-03:\n- Cost_usd: 900 (<= $6,000)\n- Reliability: 0.97 (>= 0.85)\n- eta_hours: 140\n- Rank: 3 (highest reliability, but longest eta_hours)\n\nAll three options are policy-compliant. The ranking is:\n\n1. AER-01 (eta_hours: 30, reliability: 0.94, cost: 5200)\n2. ROA-02 (eta_hours: 58, reliability: 0.9, cost: 2100)\n3. SEA-03 (eta_hours: 140, reliability: 0.97, cost: 900)\n\nNote that SEA-03 has the highest reliability, but the longest eta_hours."
+      },
+      "llm_latency_s": 1.493865966796875,
+      "input_tokens": 1541,
+      "output_tokens": 383
+    },
+    {
+      "index": 2,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 3,
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "carrier_id": "AER-01",
+            "shipment_id": "SHP-1001"
+          },
+          "ok": true,
+          "output": {
+            "status": "confirmed",
+            "shipment_id": "SHP-1001",
+            "carrier_id": "AER-01",
+            "new_eta_hours": 30,
+            "booking_ref": "BK-2EFF50C5"
+          },
+          "error": null,
+          "latency_s": 0.00026416778564453125
+        }
+      ],
+      "output": {
+        "chosen_carrier_id": "AER-01",
+        "booking": {
+          "status": "confirmed",
+          "shipment_id": "SHP-1001",
+          "carrier_id": "AER-01",
+          "new_eta_hours": 30,
+          "booking_ref": "BK-2EFF50C5"
+        },
+        "rationale": ""
+      },
+      "llm_latency_s": 0.46128201484680176,
+      "input_tokens": 843,
+      "output_tokens": 53
+    }
+  ]
+}

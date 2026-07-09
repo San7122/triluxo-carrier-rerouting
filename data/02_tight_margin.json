@@ -1,0 +1,28 @@
+{
+  "scenario_id": "tight_margin",
+  "description": "Ambiguous trade-off: the fastest option barely clears both cost and reliability limits, while a slower option is cheaper AND more reliable. Policy says fastest-compliant wins; tests whether the agent follows the stated objective instead of hedging toward 'safer' but slower.",
+  "expected_path": "ingest -> evaluate -> decide_execute -> rerouted (FastAir Charter)",
+  "policy": {"max_cost_usd": 4000, "min_reliability": 0.88, "objective": "minimize_eta_hours"},
+  "alert": {
+    "shipment_id": "SHP-2044",
+    "event": "port_congestion",
+    "carrier": "BlueFreight",
+    "origin": "Singapore",
+    "destination": "Los Angeles",
+    "commodity": "medical_devices",
+    "priority": "critical",
+    "baseline_eta_hours": 60,
+    "eta_impact_hours": 22
+  },
+  "simulation": {
+    "get_alternative_carriers": {
+      "mode": "return",
+      "carriers": [
+        {"carrier_id": "FAS-11", "name": "FastAir Charter", "mode": "air", "cost_usd": 3950, "eta_hours": 34, "reliability": 0.89},
+        {"carrier_id": "BAL-12", "name": "Balanced Road+Rail", "mode": "road", "cost_usd": 2600, "eta_hours": 40, "reliability": 0.95},
+        {"carrier_id": "CHE-13", "name": "CheapSea Bulk", "mode": "sea", "cost_usd": 800, "eta_hours": 160, "reliability": 0.99}
+      ]
+    },
+    "execute_reroute": {"mode": "succeed"}
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "scenario_id": "normal_reroute",
+  "description": "Clear disruption with several compliant options; agent should book the fastest policy-compliant carrier. Happy path.",
+  "expected_path": "ingest -> evaluate -> decide_execute -> rerouted",
+  "policy": {"max_cost_usd": 6000, "min_reliability": 0.85, "objective": "minimize_eta_hours"},
+  "alert": {
+    "shipment_id": "SHP-1001",
+    "event": "customs_delay",
+    "carrier": "BlueFreight",
+    "origin": "Shanghai",
+    "destination": "Rotterdam",
+    "commodity": "consumer_electronics",
+    "priority": "high",
+    "baseline_eta_hours": 72,
+    "eta_impact_hours": 14
+  },
+  "simulation": {
+    "get_alternative_carriers": {
+      "mode": "return",
+      "carriers": [
+        {"carrier_id": "AER-01", "name": "AeroSwift Air", "mode": "air", "cost_usd": 5200, "eta_hours": 30, "reliability": 0.94},
+        {"carrier_id": "ROA-02", "name": "RoadRunner Express", "mode": "road", "cost_usd": 2100, "eta_hours": 58, "reliability": 0.90},
+        {"carrier_id": "SEA-03", "name": "SeaLink Standard", "mode": "sea", "cost_usd": 900, "eta_hours": 140, "reliability": 0.97}
+      ]
+    },
+    "execute_reroute": {"mode": "succeed"}
+  }
+}

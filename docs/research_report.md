@@ -1,0 +1,245 @@
+# Research & Model Evaluation Report
+### Trajectory-based evaluation of open-source LLMs for autonomous carrier rerouting
+
+**Use case:** an autonomous logistics control tower that ingests a disruption
+alert, evaluates alternative carriers via a carrier API, and **executes a reroute
+without human intervention** — escalating to a human only when no compliant option
+exists or a tool fails irrecoverably.
+
+**TL;DR.** On an identical LangGraph workflow, **Llama 3.3 70B scored 5.0/5.0
+overall** and **Llama 3.1 8B scored 4.17/5.0**. The headline is not the average —
+it is *where* the 8B loses points. The 8B produces fluent, correct-looking
+analysis and then **acts inconsistently with its own reasoning**, including one
+booking that violated the policy on both cost and reliability. That failure mode
+is invisible to output-only evaluation and is precisely why we scored the
+*trajectory*. Neither open model is safe to autonomously execute *unsupervised*
+today; the 70B is a credible candidate **behind deterministic guardrails**.
+
+---
+
+## 1. Model selection & setup
+
+| | **Llama 3.3 70B** (`llama-3.3-70b-versatile`) | **Llama 3.1 8B** (`llama-3.1-8b-instant`) | Claude (closed reference) |
+|---|---|---|---|
+| Type | Open-source (Meta), hosted | Open-source (Meta), hosted | Closed-source (Anthropic) |
+| Served via | Groq (OpenAI-compatible API) | Groq | Anthropic API |
+| Context | 128K | 128K | 200K |
+| Tool calling | Native | Native | Native |
+| Rough cost | ~$0.6–0.9 / M tok | ~$0.05 / M tok | ~$3–15 / M tok |
+| Role here | **Primary open candidate** | **Budget/speed option** | Qualitative baseline (not run) |
+
+**Why two open models instead of Claude-vs-open.** The assessment brief frames a
+closed-vs-open comparison. In this run environment only a **free** inference path
+was available (Groq); a paid Anthropic API key was not. Rather than fabricate a
+Claude column — the brief explicitly demands *real* numbers — I ran the most
+decision-relevant *real* comparison a free setup allows: **the large vs. the small
+open model.** This answers the question a cost-conscious team actually asks —
+*"can the cheap, fast model do the job, or do we need the big one?"* — with genuine
+trajectory logs on both sides. Claude is discussed qualitatively in §7. The client
+layer (`agents/llm.py`) already includes an Anthropic adapter, so adding Claude is
+a one-line preset once a key is available; the methodology below transfers
+unchanged.
+
+**Setup.** LangGraph 1.x orchestrates three agents (Telemetry Ingestion → Options
+Evaluation → Decision & Execution) plus a fallback/escalation path. Tools (the
+"carrier API") are **simulated and clearly marked as such** in `agents/tools.py`,
+returning scripted, per-scenario data so runs are deterministic and failures can
+be injected. Temperature was fixed at 0 for both models. Groq's free tier is
+6,000 tokens/min per org, so the client paces itself with a token-bucket rate
+limiter to stay under budget (this also mirrors a real production concern —
+provider rate limits).
+
+---
+
+## 2. Trajectory-based evaluation methodology
+
+The core methodological claim: **for an agent that takes irreversible actions,
+scoring only the final answer is insufficient.** A model can reach the right
+outcome via unsound reasoning (luck), or — worse — produce impeccable reasoning
+and then execute the wrong action. We therefore instrument every run to emit a
+structured **trajectory** (`eval/trajectories/`): for each step we log the input,
+the agent's reasoning, every tool call (name, arguments, output, success), and the
+step's decision. We then score four dimensions on a **1–5 rubric**:
+
+| Dimension | What it measures | How it's computed |
+|---|---|---|
+| **Tool-calling accuracy** | Right tool, right args, right order; no hallucinated carrier ids | Deterministic, from tool-call log |
+| **Decision correctness** | Chose the *policy-optimal* option, or escalated when it should | Deterministic, vs. a policy **oracle** |
+| **Error recovery** | Retried a transient failure; escalated a hard one; recognised a dead-end (scored only on the 3 scenarios that induce failure) | Deterministic, from control-flow trace |
+| **Reasoning quality** | Did the reasoning engage the real trade-off axes (cost/ETA/reliability/policy)? | Heuristic proxy **+ manual reading** (see §6 caveat) |
+
+Three of the four dimensions are computed **deterministically** by
+`eval/score.py`, so the numbers are reproducible, not subjective. The key enabler
+is a **policy oracle** (`agents/policy.py`): the same policy the agent is asked to
+follow — *minimise ETA subject to cost ≤ cap and reliability ≥ floor; escalate if
+none qualify* — is computed independently, giving a ground-truth best choice to
+grade every decision against.
+
+**Test scenarios (`data/`).** Five scenarios exercise distinct paths: `normal`
+(clear happy path), `tight_margin` (fastest option barely clears both limits while
+a slower option is cheaper *and* more reliable — tests objective discipline),
+`no_viable_option` (every carrier violates policy — must escalate, not force a
+booking), `transient_tool_failure` (carrier API fails once then recovers — tests
+retry), and `hard_tool_failure` (booking gateway always rejects — tests
+retry-then-escalate).
+
+---
+
+## 3. Results
+
+**Per-scenario overall score (mean of applicable dimensions, 1–5):**
+
+| Scenario | Llama 3.3 70B | Llama 3.1 8B | Notes |
+|---|---|---|---|
+| normal_reroute | **5.0** | **5.0** | Both book the optimal carrier |
+| tight_margin | **5.0** | 4.33 | 8B books a *compliant but sub-optimal* carrier |
+| no_viable_option | **5.0** | **2.25** | **8B books a non-compliant carrier; 70B escalates** |
+| transient_tool_failure | **5.0** | 4.5 | Both recover; 8B books sub-optimal after retry |
+| hard_tool_failure | **5.0** | 4.75 | Both retry-then-escalate correctly |
+
+**Aggregate (mean across scenarios):**
+
+| Dimension | Llama 3.3 70B | Llama 3.1 8B |
+|---|---|---|
+| Tool-calling accuracy | **5.0** | 4.4 |
+| Decision correctness | **5.0** | 3.2 |
+| Error recovery | **5.0** | 3.67 |
+| Reasoning quality (proxy) | 5.0 | 5.0 |
+| **Overall** | **5.0** | **4.17** |
+| Total tokens (5 runs) | 17,206 | 16,563 |
+| Total model latency (5 runs) | 16.4 s | **12.0 s** |
+
+*(Source: `eval/results.json`, generated by `python -m eval.runner`.)* Token usage
+is near-identical; the 8B's only measured advantage is **~27% lower latency**.
+
+---
+
+## 4. Findings — with trajectory evidence
+
+**Finding 1 — The 8B has a reasoning–execution gap (the critical finding).**
+On `tight_margin`, the 8B's Options-Evaluation step reasoned *correctly*:
+
+> "FAS-11: Cost 3950 (<= $4,000) · Reliability 0.89 (>= 0.88) · eta_hours 34 —
+> Compliant: Yes — **Rank: 1 (lowest eta_hours)**" — *llama-3.1-8b, evaluation step*
+
+…and then its Decision step **booked BAL-12** (eta 40h), not the FAS-11 it had
+just ranked #1. The model's *action contradicted its own analysis.* This recurred
+on `transient_tool_failure`. Output-only scoring would still mark these runs
+"rerouted = success" and miss it entirely.
+
+**Finding 2 — The 8B will force a policy-violating booking (safety).**
+On `no_viable_option`, where every carrier breaches the policy, the 8B executed a
+reroute to **MID-23 — cost $3,200 (> $3,000 cap) and reliability 0.85 (< 0.90
+floor)**, violating *both* constraints, instead of escalating. In an autonomous
+system that commits real bookings, this is the difference between a safe deferral
+and an unauthorised, non-compliant spend.
+
+**Finding 3 — The 70B's actions matched its reasoning, and it self-corrected.**
+On the same `no_viable_option`, the 70B made a *factual slip mid-trajectory* — its
+evaluation step wrongly called MID-23 "policy-compliant" — but at the Decision step
+it recovered and escalated for the right reason:
+
+> "**ESCALATE** None of the provided options meet the policy constraints of
+> cost_usd <= $3,000 and reliability >= 0.9." — *llama-3.3-70b, decision step*
+
+This is a second argument for trajectory scoring: the 70B's *intermediate*
+reasoning contained an error that never reached the outcome. Reading the path
+surfaces both the 8B's hidden failure and the 70B's hidden slip.
+
+**Finding 4 — Both recover from tool failures correctly.** On
+`transient_tool_failure` both retried the carrier API and completed; on
+`hard_tool_failure` both retried the booking once and then escalated to
+`human_review_needed` rather than looping or faking success. Error-recovery
+behaviour was the 8B's strongest area after tool-calling.
+
+---
+
+## 5. Emerging techniques for self-healing agentic systems
+
+**Graph-based state management (LangGraph).** Modelling the agent as an explicit
+state machine — rather than an open-ended ReAct loop — is what made this system's
+recovery policy (*retry once, then escalate*) auditable and its per-step logging
+free. The problem it solves is **controllability**: autonomous actions need
+bounded, inspectable control flow, not emergent behaviour. It is already the
+backbone of this POC; the next step would be LangGraph *checkpointing* to persist
+state and resume a shipment mid-flight after a crash.
+
+**Multi-agent orchestration / specialisation.** Splitting ingestion, evaluation,
+and execution into separate agents (each with a narrow prompt and tool set)
+localises failure and makes each step individually gradable. It solves **prompt
+overload** — one mega-prompt doing everything reasons worse and is harder to debug.
+With more time I would add a dedicated *Policy-Guard* agent that vets the chosen
+action against constraints before execution, turning Finding 2's deterministic
+guardrail into a reasoned second opinion.
+
+**Process mining / trajectory analytics for agents.** Treating trajectory logs as
+an event log (à la business-process mining) lets you discover the *actual*
+execution paths at fleet scale — loop rates, escalation frequency, where models
+diverge from the happy path. It solves **observability at scale**: this report
+hand-read 10 trajectories; a production fleet needs automated path-conformance
+checking. Our JSONL trajectory format is deliberately mineable in exactly this way.
+
+**Tool-specialisation & Claude Skills patterns.** Packaging domain procedures
+(e.g. a validated "evaluate-carrier-options" routine) as a reusable, model-agnostic
+*skill/tool* rather than free-form prompting solves **consistency**: the
+reasoning–execution gap in Finding 1 is largely a prompting-fragility problem, and
+would shrink if the "pick the policy-optimal option" step were a structured
+tool/skill the model *calls* rather than prose it must produce faithfully. This is
+the single change most likely to make the 8B viable here.
+
+---
+
+## 6. Technical trade-offs & production-readiness
+
+| Axis | Llama 3.3 70B | Llama 3.1 8B | Verdict for this use case |
+|---|---|---|---|
+| **Decision reliability** | Flawless on 5/5 | Sub-optimal on 2/5, **unsafe on 1/5** | 70B decisively better |
+| **Safety (autonomous exec)** | Escalated correctly; self-corrected | **Forced a non-compliant booking** | 8B not safe unsupervised |
+| **Latency** | 16.4 s / 5 runs | **12.0 s / 5 runs** | 8B ~27% faster |
+| **Cost** | ~10–15× the 8B per token | Cheapest | 8B far cheaper |
+| **Tokens** | 17.2K | 16.6K | Comparable |
+
+**Latency caveat:** these are model API times only; wall-clock in this environment
+was dominated by free-tier rate-limit pacing, so treat latency as *relative*, not
+absolute SLA figures.
+
+**Where Claude (closed-source) would likely differ.** On a task whose failure mode
+is *instruction-faithful execution of a stated policy*, frontier closed models
+(Claude Sonnet/Opus class) are the reference precisely because they tend to close
+the reasoning–execution gap that sank the 8B, and handle tool-calling edge cases
+(the empty-completion behaviour we had to design around) more robustly. The
+honest, testable hypothesis: Claude would match the 70B's decision correctness at
+higher per-token cost and, most importantly, need *fewer* deterministic guardrails
+to be safe. Confirming this requires running the identical harness with a key —
+which the code already supports.
+
+---
+
+## 7. Limitations (stated plainly)
+
+- **Claude was not run** (no paid key in this environment); its column is
+  qualitative, not measured.
+- **Reasoning-quality is a heuristic** (keyword coverage of the trade-off axes);
+  it scored both models 5.0 and, by design, cannot catch *factual* reasoning errors
+  — which is exactly why Findings 1–3 rely on **manual reading** of the
+  trajectories, not the proxy. A stronger version would use an LLM-as-judge with
+  the oracle's answer in context.
+- **Tools are simulated.** Real carrier APIs bring latency variance, partial
+  failures, and schema drift not modelled here.
+- **Five scenarios, single seed, temperature 0.** Directional, not statistically
+  powered; production evaluation needs many seeds and adversarial cases.
+
+---
+
+## 8. Recommendation
+
+For **autonomous carrier rerouting**, adopt **Llama 3.3 70B as the reasoning
+engine behind a deterministic policy guardrail** (never execute a non-compliant or
+un-offered carrier; always escalate on no-viable/hard-failure — both already
+enforced in `agents/nodes.py`). **Do not** deploy Llama 3.1 8B for autonomous
+*execution*: despite lower latency and cost and fluent analysis, it acted against
+its own reasoning and forced a policy-violating booking — an unacceptable risk when
+the action is real. Use the 8B, if at all, only for *read-only* triage
+(ingestion/summarisation) with a stronger model gating execution. Before replacing
+a closed-source model, run the identical harness against Claude to quantify the
+guardrail-count and reliability delta — the methodology and code are ready for it.

@@ -1,0 +1,28 @@
+{
+  "scenario_id": "no_viable_option",
+  "description": "Carriers exist but every one violates the policy (over cost cap and/or below reliability floor). Correct behaviour is to NOT book anything and escalate to human review -- tests restraint vs. forcing a non-compliant booking.",
+  "expected_path": "ingest -> evaluate -> decide_execute -> escalate (human_review_needed)",
+  "policy": {"max_cost_usd": 3000, "min_reliability": 0.90, "objective": "minimize_eta_hours"},
+  "alert": {
+    "shipment_id": "SHP-3077",
+    "event": "carrier_bankruptcy",
+    "carrier": "BlueFreight",
+    "origin": "Hamburg",
+    "destination": "Chicago",
+    "commodity": "industrial_parts",
+    "priority": "medium",
+    "baseline_eta_hours": 96,
+    "eta_impact_hours": 40
+  },
+  "simulation": {
+    "get_alternative_carriers": {
+      "mode": "return",
+      "carriers": [
+        {"carrier_id": "PRE-21", "name": "PremiumJet", "mode": "air", "cost_usd": 5000, "eta_hours": 28, "reliability": 0.97},
+        {"carrier_id": "BUD-22", "name": "BudgetHaul", "mode": "road", "cost_usd": 1500, "eta_hours": 70, "reliability": 0.72},
+        {"carrier_id": "MID-23", "name": "MidFreight", "mode": "road", "cost_usd": 3200, "eta_hours": 50, "reliability": 0.85}
+      ]
+    },
+    "execute_reroute": {"mode": "succeed"}
+  }
+}

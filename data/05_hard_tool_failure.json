@@ -1,0 +1,27 @@
+{
+  "scenario_id": "hard_tool_failure",
+  "description": "A compliant carrier is chosen, but the booking gateway rejects every execute_reroute attempt. Tests the decide-stage retry-then-escalate path: retry once, and when it still fails, escalate to human review instead of looping or faking success.",
+  "expected_path": "ingest -> evaluate -> decide_execute(FAIL) -> decide_execute(retry, FAIL) -> escalate (human_review_needed)",
+  "policy": {"max_cost_usd": 6000, "min_reliability": 0.85, "objective": "minimize_eta_hours"},
+  "alert": {
+    "shipment_id": "SHP-5099",
+    "event": "mechanical_failure",
+    "carrier": "BlueFreight",
+    "origin": "Rotterdam",
+    "destination": "New York",
+    "commodity": "automotive_parts",
+    "priority": "high",
+    "baseline_eta_hours": 84,
+    "eta_impact_hours": 26
+  },
+  "simulation": {
+    "get_alternative_carriers": {
+      "mode": "return",
+      "carriers": [
+        {"carrier_id": "ATL-41", "name": "AtlanticAir", "mode": "air", "cost_usd": 5100, "eta_hours": 32, "reliability": 0.93},
+        {"carrier_id": "TRA-42", "name": "TransRail", "mode": "rail", "cost_usd": 2400, "eta_hours": 66, "reliability": 0.9}
+      ]
+    },
+    "execute_reroute": {"mode": "always_fail"}
+  }
+}

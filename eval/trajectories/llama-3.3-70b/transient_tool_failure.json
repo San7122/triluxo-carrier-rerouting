@@ -1,0 +1,196 @@
+{
+  "run_id": "1ce4a4000549",
+  "scenario_id": "transient_tool_failure",
+  "model_label": "llama-3.3-70b",
+  "provider": "groq",
+  "model_id": "llama-3.3-70b-versatile",
+  "outcome": "rerouted",
+  "final_decision": {
+    "chosen_carrier_id": "NOR-31",
+    "booking": {
+      "status": "confirmed",
+      "shipment_id": "SHP-4012",
+      "carrier_id": "NOR-31",
+      "new_eta_hours": 20,
+      "booking_ref": "BK-789B8566"
+    },
+    "rationale": ""
+  },
+  "escalation_reason": "",
+  "error": "",
+  "totals": {
+    "steps": 4,
+    "tokens": 3539,
+    "llm_latency_s": 3.965
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "event": "weather_disruption",
+        "carrier": "BlueFreight",
+        "origin": "Mumbai",
+        "destination": "Dubai",
+        "commodity": "pharmaceuticals",
+        "priority": "high",
+        "baseline_eta_hours": 48,
+        "eta_impact_hours": 18
+      },
+      "thought": "The disruption is a weather disruption affecting shipment SHP-4012 from Mumbai to Dubai, carried by BlueFreight. The operational severity is high due to the high priority of the pharmaceutical shipment and a significant ETA impact of 18 hours. Given the high priority and substantial delay, an automated reroute should be attempted to mitigate the disruption. The shipment's ETA has been impacted by 37.5%, which further justifies the high severity assessment and the need for prompt action.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-4012",
+          "event": "weather_disruption",
+          "carrier": "BlueFreight",
+          "origin": "Mumbai",
+          "destination": "Dubai",
+          "commodity": "pharmaceuticals",
+          "priority": "high",
+          "baseline_eta_hours": 48,
+          "eta_impact_hours": 18
+        },
+        "assessment": "The disruption is a weather disruption affecting shipment SHP-4012 from Mumbai to Dubai, carried by BlueFreight. The operational severity is high due to the high priority of the pharmaceutical shipment and a significant ETA impact of 18 hours. Given the high priority and substantial delay, an automated reroute should be attempted to mitigate the disruption. The shipment's ETA has been impacted by 37.5%, which further justifies the high severity assessment and the need for prompt action."
+      },
+      "llm_latency_s": 0.9401950836181641,
+      "input_tokens": 194,
+      "output_tokens": 97
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-4012"
+          },
+          "ok": false,
+          "output": null,
+          "error": "carrier_api_timeout: no response within 5s",
+          "latency_s": 4.100799560546875e-05
+        }
+      ],
+      "output": {
+        "error": "carrier_api_timeout: no response within 5s"
+      },
+      "llm_latency_s": 0.27524375915527344,
+      "input_tokens": 654,
+      "output_tokens": 22
+    },
+    {
+      "index": 2,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "attempt": 2
+      },
+      "thought": "Based on the options provided:\n\n1. NOR-31 (NorthLine Air): \n   - cost_usd: $4200 (<= $6000, compliant)\n   - reliability: 0.92 (>= 0.85, compliant)\n   - Compliant: Yes\n   - eta_hours: 20\n   - reliability: 0.92\n   - cost_usd: $4200\n\n2. GUL-32 (GulfRoad): \n   - cost_usd: $1800 (<= $6000, compliant)\n   - reliability: 0.88 (>= 0.85, compliant)\n   - Compliant: Yes\n   - eta_hours: 44\n   - reliability: 0.88\n   - cost_usd: $1800\n\nRanking the compliant options:\n1. NOR-31 (NorthLine Air) - lowest eta_hours (20)\n2. GUL-32 (GulfRoad) - higher eta_hours (44), but still compliant\n\nBoth options are compliant with the policy. The next step would be to book the reroute with the top-ranked option, NOR-31, if desired.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-4012"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-4012",
+            "carriers": [
+              {
+                "carrier_id": "NOR-31",
+                "name": "NorthLine Air",
+                "mode": "air",
+                "cost_usd": 4200,
+                "eta_hours": 20,
+                "reliability": 0.92
+              },
+              {
+                "carrier_id": "GUL-32",
+                "name": "GulfRoad",
+                "mode": "road",
+                "cost_usd": 1800,
+                "eta_hours": 44,
+                "reliability": 0.88
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 3.3855438232421875e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "NOR-31",
+            "name": "NorthLine Air",
+            "mode": "air",
+            "cost_usd": 4200,
+            "eta_hours": 20,
+            "reliability": 0.92
+          },
+          {
+            "carrier_id": "GUL-32",
+            "name": "GulfRoad",
+            "mode": "road",
+            "cost_usd": 1800,
+            "eta_hours": 44,
+            "reliability": 0.88
+          }
+        ],
+        "assessment": "Based on the options provided:\n\n1. NOR-31 (NorthLine Air): \n   - cost_usd: $4200 (<= $6000, compliant)\n   - reliability: 0.92 (>= 0.85, compliant)\n   - Compliant: Yes\n   - eta_hours: 20\n   - reliability: 0.92\n   - cost_usd: $4200\n\n2. GUL-32 (GulfRoad): \n   - cost_usd: $1800 (<= $6000, compliant)\n   - reliability: 0.88 (>= 0.85, compliant)\n   - Compliant: Yes\n   - eta_hours: 44\n   - reliability: 0.88\n   - cost_usd: $1800\n\nRanking the compliant options:\n1. NOR-31 (NorthLine Air) - lowest eta_hours (20)\n2. GUL-32 (GulfRoad) - higher eta_hours (44), but still compliant\n\nBoth options are compliant with the policy. The next step would be to book the reroute with the top-ranked option, NOR-31, if desired."
+      },
+      "llm_latency_s": 1.9851248264312744,
+      "input_tokens": 1492,
+      "output_tokens": 264
+    },
+    {
+      "index": 3,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 2,
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "carrier_id": "NOR-31",
+            "shipment_id": "SHP-4012"
+          },
+          "ok": true,
+          "output": {
+            "status": "confirmed",
+            "shipment_id": "SHP-4012",
+            "carrier_id": "NOR-31",
+            "new_eta_hours": 20,
+            "booking_ref": "BK-789B8566"
+          },
+          "error": null,
+          "latency_s": 0.0001499652862548828
+        }
+      ],
+      "output": {
+        "chosen_carrier_id": "NOR-31",
+        "booking": {
+          "status": "confirmed",
+          "shipment_id": "SHP-4012",
+          "carrier_id": "NOR-31",
+          "new_eta_hours": 20,
+          "booking_ref": "BK-789B8566"
+        },
+        "rationale": ""
+      },
+      "llm_latency_s": 0.7642941474914551,
+      "input_tokens": 784,
+      "output_tokens": 32
+    }
+  ]
+}

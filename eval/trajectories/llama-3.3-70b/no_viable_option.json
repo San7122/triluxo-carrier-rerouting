@@ -1,0 +1,205 @@
+{
+  "run_id": "df9e5c1086cf",
+  "scenario_id": "no_viable_option",
+  "model_label": "llama-3.3-70b",
+  "provider": "groq",
+  "model_id": "llama-3.3-70b-versatile",
+  "outcome": "human_review_needed",
+  "final_decision": null,
+  "escalation_reason": "agent_escalated: ESCALATE None of the provided options meet the policy constraints of cost_usd <= $3,000 and reliability >= 0.9.",
+  "error": "",
+  "totals": {
+    "steps": 4,
+    "tokens": 3956,
+    "llm_latency_s": 3.487
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-3077",
+        "event": "carrier_bankruptcy",
+        "carrier": "BlueFreight",
+        "origin": "Hamburg",
+        "destination": "Chicago",
+        "commodity": "industrial_parts",
+        "priority": "medium",
+        "baseline_eta_hours": 96,
+        "eta_impact_hours": 40
+      },
+      "thought": "A shipment (SHP-3077) from Hamburg to Chicago carrying industrial parts is disrupted due to the bankruptcy of carrier BlueFreight. The operational severity is medium due to the 40-hour ETA impact on a medium-priority shipment. Given the significant delay, an automated reroute should be attempted to mitigate the disruption. The shipment's new ETA would be 136 hours, which warrants prompt action to minimize further delays.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-3077",
+          "event": "carrier_bankruptcy",
+          "carrier": "BlueFreight",
+          "origin": "Hamburg",
+          "destination": "Chicago",
+          "commodity": "industrial_parts",
+          "priority": "medium",
+          "baseline_eta_hours": 96,
+          "eta_impact_hours": 40
+        },
+        "assessment": "A shipment (SHP-3077) from Hamburg to Chicago carrying industrial parts is disrupted due to the bankruptcy of carrier BlueFreight. The operational severity is medium due to the 40-hour ETA impact on a medium-priority shipment. Given the significant delay, an automated reroute should be attempted to mitigate the disruption. The shipment's new ETA would be 136 hours, which warrants prompt action to minimize further delays."
+      },
+      "llm_latency_s": 0.7097349166870117,
+      "input_tokens": 192,
+      "output_tokens": 86
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-3077",
+        "attempt": 1
+      },
+      "thought": "Based on the options provided:\n\n1. PremiumJet (PRE-21): cost_usd ($5000) exceeds the limit of $3000, so it is NOT policy-compliant.\n2. BudgetHaul (BUD-22): reliability (0.72) is less than the required 0.9, so it is NOT policy-compliant.\n3. MidFreight (MID-23): cost_usd ($3200) is within the limit and reliability (0.85) meets the requirement, so it IS policy-compliant.\n\nSince only MidFreight (MID-23) is policy-compliant, there is no need for ranking as it is the only option that satisfies the policy constraints.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-3077"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-3077",
+            "carriers": [
+              {
+                "carrier_id": "PRE-21",
+                "name": "PremiumJet",
+                "mode": "air",
+                "cost_usd": 5000,
+                "eta_hours": 28,
+                "reliability": 0.97
+              },
+              {
+                "carrier_id": "BUD-22",
+                "name": "BudgetHaul",
+                "mode": "road",
+                "cost_usd": 1500,
+                "eta_hours": 70,
+                "reliability": 0.72
+              },
+              {
+                "carrier_id": "MID-23",
+                "name": "MidFreight",
+                "mode": "road",
+                "cost_usd": 3200,
+                "eta_hours": 50,
+                "reliability": 0.85
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 3.0994415283203125e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "PRE-21",
+            "name": "PremiumJet",
+            "mode": "air",
+            "cost_usd": 5000,
+            "eta_hours": 28,
+            "reliability": 0.97
+          },
+          {
+            "carrier_id": "BUD-22",
+            "name": "BudgetHaul",
+            "mode": "road",
+            "cost_usd": 1500,
+            "eta_hours": 70,
+            "reliability": 0.72
+          },
+          {
+            "carrier_id": "MID-23",
+            "name": "MidFreight",
+            "mode": "road",
+            "cost_usd": 3200,
+            "eta_hours": 50,
+            "reliability": 0.85
+          }
+        ],
+        "assessment": "Based on the options provided:\n\n1. PremiumJet (PRE-21): cost_usd ($5000) exceeds the limit of $3000, so it is NOT policy-compliant.\n2. BudgetHaul (BUD-22): reliability (0.72) is less than the required 0.9, so it is NOT policy-compliant.\n3. MidFreight (MID-23): cost_usd ($3200) is within the limit and reliability (0.85) meets the requirement, so it IS policy-compliant.\n\nSince only MidFreight (MID-23) is policy-compliant, there is no need for ranking as it is the only option that satisfies the policy constraints."
+      },
+      "llm_latency_s": 1.3131487369537354,
+      "input_tokens": 1540,
+      "output_tokens": 170
+    },
+    {
+      "index": 2,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 3,
+        "attempt": 1
+      },
+      "thought": "ESCALATE None of the provided options meet the policy constraints of cost_usd <= $3,000 and reliability >= 0.9.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-3077"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-3077",
+            "carriers": [
+              {
+                "carrier_id": "PRE-21",
+                "name": "PremiumJet",
+                "mode": "air",
+                "cost_usd": 5000,
+                "eta_hours": 28,
+                "reliability": 0.97
+              },
+              {
+                "carrier_id": "BUD-22",
+                "name": "BudgetHaul",
+                "mode": "road",
+                "cost_usd": 1500,
+                "eta_hours": 70,
+                "reliability": 0.72
+              },
+              {
+                "carrier_id": "MID-23",
+                "name": "MidFreight",
+                "mode": "road",
+                "cost_usd": 3200,
+                "eta_hours": 50,
+                "reliability": 0.85
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 1.6927719116210938e-05
+        }
+      ],
+      "output": {
+        "decision": "escalate",
+        "reason": "ESCALATE None of the provided options meet the policy constraints of cost_usd <= $3,000 and reliability >= 0.9."
+      },
+      "llm_latency_s": 1.4642410278320312,
+      "input_tokens": 1916,
+      "output_tokens": 52
+    },
+    {
+      "index": 3,
+      "node": "human_review_needed",
+      "input": {
+        "stage": "decide"
+      },
+      "thought": "",
+      "tool_events": [],
+      "output": {
+        "escalation_reason": "agent_escalated: ESCALATE None of the provided options meet the policy constraints of cost_usd <= $3,000 and reliability >= 0.9.",
+        "policy_check": "policy confirms no viable option -> escalation correct"
+      },
+      "llm_latency_s": 0.0,
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  ]
+}
