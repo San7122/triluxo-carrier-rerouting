@@ -183,6 +183,69 @@ I hardened after a real Groq rate-limit corrupted a run.
 
 ---
 
+## Run with Docker (fully reproducible, no local Python)
+
+```bash
+# Build once
+docker build -t carrier-rerouting .
+
+# Offline smoke test — needs no API key, proves the whole graph + scorer
+docker run --rm carrier-rerouting
+
+# Full eval against the open models (pass your key in)
+docker run --rm -e GROQ_API_KEY=gsk_... carrier-rerouting python -m eval.runner
+
+# Regenerate the deck
+docker run --rm -v "$PWD/docs:/app/docs" carrier-rerouting python docs/build_deck.py
+```
+
+A [`Makefile`](Makefile) wraps the common flows: `make smoke`, `make run`,
+`make deck`, `make docker`.
+
+## Agent-role mapping
+
+The graph is **three agents + an escalation path** — deliberately not seven thin
+agents, which for a 3–4h scope would be complexity without benefit. Here is how the
+classic logistics-control-tower roles map onto it:
+
+| Classic role | Where it lives |
+|---|---|
+| Telemetry ingestion / Planner | `ingest` node ([agents/nodes.py](agents/nodes.py)) |
+| Risk analysis / Route optimizer | `evaluate` node + `policy_optimal()` ([agents/policy.py](agents/policy.py)) |
+| Policy validation | `policy_text()` (prompted) **+** deterministic guardrail in `decide_execute` (enforced) |
+| Execution agent | `decide_execute` node — `execute_reroute` tool |
+| Monitoring / reflection | trajectory logs + `escalate` node's policy sanity-check |
+
+## Assumptions
+
+- **The carrier API is simulated** (clearly marked in [agents/tools.py](agents/tools.py)).
+  Real integrations (a TMS/rate-shopping API for options, a booking/EDI transaction
+  for execution) are a localized swap behind the same tool interfaces.
+- **The reroute policy is explicit and deterministic**: an option is viable iff
+  `cost_usd ≤ cap` and `reliability ≥ floor`; among viable, minimise ETA. This lets
+  us compute a ground-truth optimal choice to grade every decision.
+- **Temperature 0, single seed** — runs are deterministic so results are
+  reproducible and differences are attributable to the model, not sampling noise.
+- **Groq free tier** is the open-model inference path; a token-bucket rate limiter
+  keeps runs under the 6k TPM budget (also mirrors a real production rate-limit).
+- **One irreversible action per run** (the booking). The whole safety argument
+  rests on the agent knowing when *not* to take it.
+
+## Limitations
+
+- **Claude (closed-source) was not measured** — no paid Anthropic key in this
+  environment. Its column is qualitative; the adapter and `claude` preset are ready
+  (`python -m eval.runner --models claude` once `ANTHROPIC_API_KEY` is set).
+- **Reasoning-quality is a keyword heuristic** — it cannot catch *factual* reasoning
+  errors, which is why the key findings rely on **manual reading** of trajectories,
+  not the proxy. A stronger version uses LLM-as-judge with the oracle answer in context.
+- **Five scenarios, single seed** — directional, not statistically powered.
+  Production evaluation needs many seeds and adversarial cases.
+- **Simulated tools** don't model real-world latency variance, partial failures, or
+  schema drift.
+
+Full technical treatment of these is in [docs/research_report.md](docs/research_report.md) §7.
+
 ## Repo layout
 
 ```
@@ -201,7 +264,7 @@ eval/
   results.json   scored results
 docs/
   research_report.md   Part 1
-  deck.pptx            Part 3 (11 slides, regenerate with: python docs/build_deck.py)
+  deck.pptx            Part 3 (12 slides, regenerate with: python docs/build_deck.py)
   build_deck.py        deck generator (built with python-pptx; the referenced
                        /mnt pptx skill was unavailable in this environment)
 ```

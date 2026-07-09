@@ -1,19 +1,93 @@
 # Research & Model Evaluation Report
-### Trajectory-based evaluation of open-source LLMs for autonomous carrier rerouting
+### Trajectory-based evaluation of frontier vs. open-source LLMs for autonomous carrier rerouting
 
-**Use case:** an autonomous logistics control tower that ingests a disruption
-alert, evaluates alternative carriers via a carrier API, and **executes a reroute
-without human intervention** — escalating to a human only when no compliant option
-exists or a tool fails irrecoverably.
+## Executive Summary
 
-**TL;DR.** On an identical LangGraph workflow, **Llama 3.3 70B scored 5.0/5.0
-overall** and **Llama 3.1 8B scored 4.17/5.0**. The headline is not the average —
-it is *where* the 8B loses points. The 8B produces fluent, correct-looking
-analysis and then **acts inconsistently with its own reasoning**, including one
-booking that violated the policy on both cost and reliability. That failure mode
-is invisible to output-only evaluation and is precisely why we scored the
-*trajectory*. Neither open model is safe to autonomously execute *unsupervised*
-today; the 70B is a credible candidate **behind deterministic guardrails**.
+On an **identical LangGraph workflow**, **Llama 3.3 70B scored 5.0/5.0 overall**
+and **Llama 3.1 8B scored 4.17/5.0**. The headline is not the average — it is
+*where* the 8B loses points. The 8B produces fluent, correct-looking analysis and
+then **acts inconsistently with its own reasoning**, including one booking that
+violated the policy on both cost and reliability. That failure mode is **invisible
+to output-only evaluation** and is precisely why we scored the *trajectory* (every
+reasoning step, tool call, and recovery action), not just the final outcome.
+
+**Recommendation in one line:** neither open model is safe to execute
+*unsupervised* today; **Llama 3.3 70B is a credible production candidate behind a
+deterministic policy guardrail**, and Llama 3.1 8B should be restricted to
+read-only triage. The frontier closed-source reference (Claude) is **selected and
+fully wired into the harness** but was **not measured** in this environment (no
+Anthropic key available); the methodology and code transfer to it unchanged — see
+§7 and the note in §1.
+
+## Problem Statement
+
+Logistics disruptions — a customs hold, port congestion, a carrier failure — add
+14–40 hours to the ETA of high-value, time-critical freight. Today a human
+expediter must notice the alert, pull up alternative carriers, weigh cost vs. ETA
+vs. reliability against company policy, and rebook — often hours later. The
+decision is repetitive and rule-based, making it a strong candidate for an
+**autonomous agent** — *if* the agent can be trusted to take an irreversible
+action (a real booking that spends money and commits freight).
+
+This project builds that agent and, more importantly, answers the research
+question the business actually faces: **which model can you trust to act, and how
+do you measure "trust" for an agent whose mistakes are actions, not just wrong
+answers?** The answer is trajectory-based evaluation.
+
+## System Architecture
+
+**Runtime agent graph** (`agents/graph.py`) — an explicit LangGraph state machine,
+not an open-ended ReAct loop, so the recovery policy is auditable and every node
+emits a scoreable trajectory step:
+
+```
+          telemetry alert (JSON)
+                   │
+                   ▼
+   ┌───────────────────────────┐   Agent 1 · Telemetry Ingestion
+   │  ingest                   │   parse alert, rate severity, decide if reroute warranted
+   └─────────────┬─────────────┘
+                 ▼
+   ┌───────────────────────────┐   Agent 2 · Options Evaluation   ── tool: get_alternative_carriers
+   │  evaluate                 │   fetch carriers, reason cost/ETA/reliability trade-offs
+   └───┬───────────────┬───────┘
+    ok │        fail/empty │ ── retry once (budget=1) ──┐
+       ▼                   ▼                            │
+   ┌───────────────────────────┐   Agent 3 · Decision & Execution ── tool: execute_reroute
+   │  decide_execute           │   pick policy-optimal carrier, book it        │
+   │   ├─ Policy Validation (deterministic guardrail): reject un-offered /      │
+   │   │   non-compliant carrier_id BEFORE booking  (nodes.py:184-192)          │
+   └───┬───────────────┬───────┘                                               │
+    ok │        fail    │ ── retry once ──────────────────────────────────────►│
+       ▼                ▼ escalate (no viable option)                          ▼
+ ┌──────────┐   ┌──────────────────────────────────────────────────────────────┐
+ │ REROUTED │   │  escalate → HUMAN_REVIEW_NEEDED (+ deterministic sanity check) │
+ └──────────┘   └──────────────────────────────────────────────────────────────┘
+```
+
+**Evaluation harness** (`eval/`) — the same graph is run per (model × scenario);
+each run emits a trajectory that is scored against an independently-computed oracle:
+
+```
+ data/*.json  ──►  eval/runner.py  ──►  agents/graph.py (model under test)
+ (5 scenarios)          │                        │
+                        │                        ▼
+                        │              eval/trajectories/<model>/<scenario>.json
+                        ▼                        │
+              agents/policy.py  ── oracle ──►  eval/score.py  ──►  eval/results.json
+              (policy_optimal = ground truth)   (1–5 rubric, 4 dims)
+```
+
+**Agent-role mapping** (how the three agents cover the classic control-tower
+roles, without inflating the graph into seven thin agents):
+
+| Classic role | Where it lives here |
+|---|---|
+| Telemetry ingestion / Planner | `ingest` node — severity assessment + reroute decision |
+| Risk analysis / Route optimizer | `evaluate` node + `policy_optimal()` — trade-off reasoning over cost/ETA/reliability |
+| Policy validation | `policy_text()` (prompted) **and** the deterministic guardrail in `decide_execute` (enforced) |
+| Execution agent | `decide_execute` node — `execute_reroute` tool call |
+| Monitoring / reflection | trajectory logs + `escalate` node's post-hoc policy sanity-check; full observability discussed in §5 (process mining) |
 
 ---
 
@@ -243,3 +317,31 @@ the action is real. Use the 8B, if at all, only for *read-only* triage
 (ingestion/summarisation) with a stronger model gating execution. Before replacing
 a closed-source model, run the identical harness against Claude to quantify the
 guardrail-count and reliability delta — the methodology and code are ready for it.
+
+---
+
+## 9. References
+
+1. **LangGraph** — graph-based agent orchestration & state management.
+   Docs: https://langchain-ai.github.io/langgraph/ · Checkpointing (state
+   persistence): https://langchain-ai.github.io/langgraph/concepts/persistence/
+2. Yao et al., **"ReAct: Synergizing Reasoning and Acting in Language Models,"**
+   ICLR 2023. https://arxiv.org/abs/2210.03629 — the reason we chose an *explicit*
+   graph over an open-ended ReAct loop for auditable control flow.
+3. van der Aalst, W., **"Process Mining: Data Science in Action,"** 2nd ed.,
+   Springer 2016 — the event-log / path-conformance framing applied to agent
+   trajectories in §5.
+4. **Anthropic — Building effective agents** (orchestration patterns, guardrails):
+   https://www.anthropic.com/research/building-effective-agents
+5. **Anthropic — Agent Skills** (packaging reusable, model-agnostic procedures;
+   the "skills" pattern discussed in §5):
+   https://www.anthropic.com/news/skills · https://docs.claude.com/en/docs/claude-code/skills
+6. **Anthropic Messages API & model reference** (closed-source client target):
+   https://docs.claude.com/en/api/messages
+7. **Groq API** (OpenAI-compatible inference for the open models):
+   https://console.groq.com/docs
+8. Meta AI, **Llama 3.1 / 3.3 model cards** —
+   https://ai.meta.com/blog/meta-llama-3-1/
+9. **LLM-as-a-judge** evaluation (the stronger reasoning-quality scorer proposed in
+   §7): Zheng et al., "Judging LLM-as-a-Judge," NeurIPS 2023.
+   https://arxiv.org/abs/2306.05685

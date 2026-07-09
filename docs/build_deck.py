@@ -305,7 +305,37 @@ notes(s, "The message: the architecture doesn't change from POC to prod — only
          "triages, 70B decides) turns our finding into a cost lever.")
 
 # =====================================================================
-# Slide 9 — Risks & open questions
+# Slide 9 — The economics / cost
+# =====================================================================
+s = content_slide("The economics: inference cost is negligible — buy trust, not cheap tokens",
+                  kicker="Cost")
+# cost-per-reroute comparison (est., ~3,400 tokens/run from eval/results.json)
+ct = CategoryChartData()
+ct.categories = ["Llama 3.1 8B", "Llama 3.3 70B", "Claude (frontier, est.)"]
+ct.add_series("Cost per autonomous reroute (USD)", (0.0002, 0.0028, 0.024))
+gf = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
+                        Inches(0.75), Inches(2.15), Inches(6.7), Inches(4.5), ct)
+ch = gf.chart
+ch.has_title = False
+ch.has_legend = False
+ch.plots[0].series[0].format.fill.solid()
+ch.plots[0].series[0].format.fill.fore_color.rgb = TEAL
+textbox(s, Inches(7.8), Inches(2.25), Inches(5.1), Inches(4.6), [
+    ("~3,400 tokens per reroute (measured).", {"size": 14, "bold": True, "color": NAVY}),
+    ("Even the big model costs ~$0.003 per reroute — about $30/mo at 10,000 reroutes.", {"size": 14, "color": INK}),
+    ("A human expediter today: ~$15–30 in labour PLUS hours of delay per event.", {"size": 14, "color": INK}),
+    ("So the 70B's ~15× premium over the 8B is still trivial — dwarfed by the cost of ONE wrong autonomous booking.", {"size": 14, "bold": True, "color": RED}),
+    ("Cost lever: route the cheap 8B for triage, the 70B (or a frontier model) only for the execution decision.", {"size": 14, "color": GREY}),
+], space_after=11)
+notes(s, "Reframe the cost conversation. The instinct is to pick the cheapest model, but at ~$0.003 "
+         "per reroute the inference cost is a rounding error next to human labour and cost-of-delay. "
+         "The decision must be made on trust/safety, not token price — which is the whole point of the "
+         "evaluation. Claude's number is an estimate from public per-token pricing (not measured here). "
+         "Model-routing is the one place cost genuinely matters: use the 8B for cheap read-only triage "
+         "and reserve the expensive, trustworthy model for the irreversible decision.")
+
+# =====================================================================
+# Slide 10 — Risks & open questions
 # =====================================================================
 s = content_slide("Risks & open questions", kicker="What we don't yet know")
 bullets(s, [
