@@ -1,0 +1,196 @@
+{
+  "run_id": "153b4f6caed9",
+  "scenario_id": "transient_tool_failure",
+  "model_label": "gpt-4o",
+  "provider": "openai",
+  "model_id": "gpt-4o",
+  "outcome": "rerouted",
+  "final_decision": {
+    "chosen_carrier_id": "NOR-31",
+    "booking": {
+      "status": "confirmed",
+      "shipment_id": "SHP-4012",
+      "carrier_id": "NOR-31",
+      "new_eta_hours": 20,
+      "booking_ref": "BK-82D49880"
+    },
+    "rationale": ""
+  },
+  "escalation_reason": "",
+  "error": "",
+  "totals": {
+    "steps": 4,
+    "tokens": 2311,
+    "llm_latency_s": 8.777
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "event": "weather_disruption",
+        "carrier": "BlueFreight",
+        "origin": "Mumbai",
+        "destination": "Dubai",
+        "commodity": "pharmaceuticals",
+        "priority": "high",
+        "baseline_eta_hours": 48,
+        "eta_impact_hours": 18
+      },
+      "thought": "The shipment SHP-4012 is experiencing a weather disruption, causing an 18-hour delay from Mumbai to Dubai. Given the high priority of pharmaceuticals and the significant ETA impact, the operational severity is high. An automated reroute should be attempted to minimize the delay and ensure timely delivery.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-4012",
+          "event": "weather_disruption",
+          "carrier": "BlueFreight",
+          "origin": "Mumbai",
+          "destination": "Dubai",
+          "commodity": "pharmaceuticals",
+          "priority": "high",
+          "baseline_eta_hours": 48,
+          "eta_impact_hours": 18
+        },
+        "assessment": "The shipment SHP-4012 is experiencing a weather disruption, causing an 18-hour delay from Mumbai to Dubai. Given the high priority of pharmaceuticals and the significant ETA impact, the operational severity is high. An automated reroute should be attempted to minimize the delay and ensure timely delivery."
+      },
+      "llm_latency_s": 1.9625489711761475,
+      "input_tokens": 165,
+      "output_tokens": 58
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-4012"
+          },
+          "ok": false,
+          "output": null,
+          "error": "carrier_api_timeout: no response within 5s",
+          "latency_s": 3.790855407714844e-05
+        }
+      ],
+      "output": {
+        "error": "carrier_api_timeout: no response within 5s"
+      },
+      "llm_latency_s": 1.383147954940796,
+      "input_tokens": 353,
+      "output_tokens": 22
+    },
+    {
+      "index": 2,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-4012",
+        "attempt": 2
+      },
+      "thought": "Let's evaluate the options against the reroute policy:\n\n1. **NorthLine Air (Carrier ID: NOR-31)**\n   - **Cost:** $4,200\n   - **ETA:** 20 hours\n   - **Reliability:** 0.92\n   - **Policy Compliance:** \n     - Cost is less than $6,000 \u2714\ufe0f\n     - Reliability is 0.92, which is greater than 0.85 \u2714\ufe0f\n     - **Compliant:** Yes\n\n2. **GulfRoad (Carrier ID: GUL-32)**\n   - **Cost:** $1,800\n   - **ETA:** 44 hours\n   - **Reliability:** 0.88\n   - **Policy Compliance:** \n     - Cost is less than $6,000 \u2714\ufe0f\n     - Reliability is 0.88, which is greater than 0.85 \u2714\ufe0f\n     - **Compliant:** Yes\n\n**Ranking of Compliant Options:**\n1. **NorthLine Air (Carrier ID: NOR-31)**\n   - Fastest ETA at 20 hours.\n   - Higher reliability at 0.92.\n2. **GulfRoad (Carrier ID: GUL-32)**\n   - Longer ETA at 44 hours.\n   - Lower reliability at 0.88.\n\nNorthLine Air is the top-ranked option due to its faster ETA and higher reliability.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-4012"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-4012",
+            "carriers": [
+              {
+                "carrier_id": "NOR-31",
+                "name": "NorthLine Air",
+                "mode": "air",
+                "cost_usd": 4200,
+                "eta_hours": 20,
+                "reliability": 0.92
+              },
+              {
+                "carrier_id": "GUL-32",
+                "name": "GulfRoad",
+                "mode": "road",
+                "cost_usd": 1800,
+                "eta_hours": 44,
+                "reliability": 0.88
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 1.4066696166992188e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "NOR-31",
+            "name": "NorthLine Air",
+            "mode": "air",
+            "cost_usd": 4200,
+            "eta_hours": 20,
+            "reliability": 0.92
+          },
+          {
+            "carrier_id": "GUL-32",
+            "name": "GulfRoad",
+            "mode": "road",
+            "cost_usd": 1800,
+            "eta_hours": 44,
+            "reliability": 0.88
+          }
+        ],
+        "assessment": "Let's evaluate the options against the reroute policy:\n\n1. **NorthLine Air (Carrier ID: NOR-31)**\n   - **Cost:** $4,200\n   - **ETA:** 20 hours\n   - **Reliability:** 0.92\n   - **Policy Compliance:** \n     - Cost is less than $6,000 \u2714\ufe0f\n     - Reliability is 0.92, which is greater than 0.85 \u2714\ufe0f\n     - **Compliant:** Yes\n\n2. **GulfRoad (Carrier ID: GUL-32)**\n   - **Cost:** $1,800\n   - **ETA:** 44 hours\n   - **Reliability:** 0.88\n   - **Policy Compliance:** \n     - Cost is less than $6,000 \u2714\ufe0f\n     - Reliability is 0.88, which is greater than 0.85 \u2714\ufe0f\n     - **Compliant:** Yes\n\n**Ranking of Compliant Options:**\n1. **NorthLine Air (Carrier ID: NOR-31)**\n   - Fastest ETA at 20 hours.\n   - Higher reliability at 0.92.\n2. **GulfRoad (Carrier ID: GUL-32)**\n   - Longer ETA at 44 hours.\n   - Lower reliability at 0.88.\n\nNorthLine Air is the top-ranked option due to its faster ETA and higher reliability."
+      },
+      "llm_latency_s": 4.344436883926392,
+      "input_tokens": 888,
+      "output_tokens": 315
+    },
+    {
+      "index": 3,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 2,
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "shipment_id": "SHP-4012",
+            "carrier_id": "NOR-31"
+          },
+          "ok": true,
+          "output": {
+            "status": "confirmed",
+            "shipment_id": "SHP-4012",
+            "carrier_id": "NOR-31",
+            "new_eta_hours": 20,
+            "booking_ref": "BK-82D49880"
+          },
+          "error": null,
+          "latency_s": 0.0001690387725830078
+        }
+      ],
+      "output": {
+        "chosen_carrier_id": "NOR-31",
+        "booking": {
+          "status": "confirmed",
+          "shipment_id": "SHP-4012",
+          "carrier_id": "NOR-31",
+          "new_eta_hours": 20,
+          "booking_ref": "BK-82D49880"
+        },
+        "rationale": ""
+      },
+      "llm_latency_s": 1.0870459079742432,
+      "input_tokens": 482,
+      "output_tokens": 28
+    }
+  ]
+}

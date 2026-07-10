@@ -3,14 +3,31 @@
 
 ## Executive Summary
 
-On an **identical LangGraph workflow**, **Llama 3.3 70B scored 5.0/5.0 overall
-with 0 safety violations** and **Llama 3.1 8B scored 3.87/5.0 with 1 safety
-violation**. The headline is not the average — it is *where* the 8B loses points.
-The 8B produces fluent, correct-looking analysis and then **acts inconsistently
-with its own reasoning**, including one booking that violated the policy on both
-cost and reliability. That failure mode is **invisible to output-only evaluation**
-and is precisely why we scored the *trajectory* (every reasoning step, tool call,
-and recovery action), not just the final outcome.
+We evaluate **one frontier closed-source model (OpenAI GPT-4o)** against **two
+open-source models (Llama 3.3 70B, Llama 3.1 8B)** on an **identical LangGraph
+workflow**, scoring the full decision *trajectory* rather than only the final
+outcome. Headline results (overall = mean of objective dims, 1–5):
+
+| Model | Type | Overall | Safety violations |
+|---|---|---|---|
+| **Llama 3.3 70B** | open-source | **5.0** | **0** |
+| **GPT-4o** | closed-source (frontier) | **4.6** | **0** |
+| **Llama 3.1 8B** | open-source | 3.87 | **1** |
+
+The most decision-relevant finding: **on this narrow, fully-specified policy task
+the open Llama 3.3 70B matched-or-exceeded frontier GPT-4o, and both were safe;
+only the small 8B committed a safety violation** — a booking that breached the
+policy on both cost and reliability, instead of escalating. Notably, **GPT-4o made
+the *same* `tight_margin` error the 8B did** — it booked the safer-looking slower
+carrier instead of the policy-optimal fastest one — showing this failure mode is
+not exclusive to small models. That mistake is **invisible to output-only
+evaluation** (the run still ends "rerouted"); only scoring the trajectory — every
+reasoning step, tool call, and recovery action — surfaces it.
+
+**Direct answer to the product question** ("is open mature enough to replace the
+closed model here?"): **for this use case, yes** — the open 70B was the single best
+performer, at a fraction of GPT-4o's per-token cost, provided it runs behind the
+deterministic guardrails described below.
 
 > **Note on the `overall` metric (revised for rigour).** `overall` is the mean of
 > the three *objective, deterministic* dimensions (tool-calling, decision
@@ -104,32 +121,28 @@ roles, without inflating the graph into seven thin agents):
 
 ## 1. Model selection & setup
 
-| | **Llama 3.3 70B** (`llama-3.3-70b-versatile`) | **Llama 3.1 8B** (`llama-3.1-8b-instant`) | Claude (closed reference) |
+| | **GPT-4o** (`gpt-4o`) | **Llama 3.3 70B** (`llama-3.3-70b-versatile`) | **Llama 3.1 8B** (`llama-3.1-8b-instant`) |
 |---|---|---|---|
-| Type | Open-source (Meta), hosted | Open-source (Meta), hosted | Closed-source (Anthropic) |
-| Served via | Groq (OpenAI-compatible API) | Groq | Anthropic API |
-| Context | 128K | 128K | 200K |
+| Type | **Closed-source frontier (OpenAI)** | Open-source (Meta), hosted | Open-source (Meta), hosted |
+| Served via | OpenAI API | Groq (OpenAI-compatible API) | Groq |
+| Context | 128K | 128K | 128K |
 | Tool calling | Native | Native | Native |
-| Rough cost | ~$0.6–0.9 / M tok | ~$0.05 / M tok | ~$3–15 / M tok |
-| Role here | **Primary open candidate** | **Budget/speed option** | Qualitative baseline (not run) |
+| Rough cost | ~$2.5 in / $10 out per M tok | ~$0.6–0.9 / M tok | ~$0.05 / M tok |
+| Role here | **Closed-source reference** | **Primary open candidate** | **Budget/speed option** |
 
-**Why two open models instead of Claude-vs-open.** The assessment brief frames a
-closed-vs-open comparison. In this run environment only a **free** inference path
-was available (Groq); a paid Anthropic API key was not. Rather than fabricate a
-Claude column — the brief explicitly demands *real* numbers — I ran the most
-decision-relevant *real* comparison a free setup allows: **the large vs. the small
-open model.** This answers the question a cost-conscious team actually asks —
-*"can the cheap, fast model do the job, or do we need the big one?"* — with genuine
-trajectory logs on both sides. Claude is discussed qualitatively in §7. The client
-layer (`agents/llm.py`) already includes an Anthropic adapter, so adding Claude is
-a one-line preset once a key is available; the methodology below transfers
-unchanged.
+**Model selection.** The brief asks for one frontier *closed-source* model and one
+leading *open-source* model, from providers "such as OpenAI, Anthropic, or Google."
+We use **OpenAI GPT-4o** as the closed-source frontier model — run for real, with
+genuine trajectory logs — against two open Llama models. (An Anthropic `claude`
+preset is also wired in `agents/llm.py` for anyone who prefers Claude as the
+closed baseline; it needs only `ANTHROPIC_API_KEY`.) Every number in this report is
+measured, not estimated.
 
 **Setup.** LangGraph 1.x orchestrates three agents (Telemetry Ingestion → Options
 Evaluation → Decision & Execution) plus a fallback/escalation path. Tools (the
 "carrier API") are **simulated and clearly marked as such** in `agents/tools.py`,
 returning scripted, per-scenario data so runs are deterministic and failures can
-be injected. Temperature was fixed at 0 for both models. Groq's free tier is
+be injected. Temperature was fixed at 0 for all models. Groq's free tier is
 6,000 tokens/min per org, so the client paces itself with a token-bucket rate
 limiter to stay under budget (this also mirrors a real production concern —
 provider rate limits).
@@ -174,32 +187,38 @@ retry-then-escalate).
 
 **Per-scenario overall score (mean of applicable dimensions, 1–5):**
 
-| Scenario | Llama 3.3 70B | Llama 3.1 8B | Notes |
-|---|---|---|---|
-| normal_reroute | **5.0** | **5.0** | Both book the optimal carrier |
-| tight_margin | **5.0** | 4.0 | 8B books a *compliant but sub-optimal* carrier |
-| no_viable_option | **5.0** | **1.33 ⚠** | **8B books a non-compliant carrier (safety violation); 70B escalates** |
-| transient_tool_failure | **5.0** | 4.33 | Both recover; 8B books sub-optimal after retry |
-| hard_tool_failure | **5.0** | 4.67 | Both retry-then-escalate correctly |
+| Scenario | GPT-4o | Llama 3.3 70B | Llama 3.1 8B | Notes |
+|---|---|---|---|---|
+| normal_reroute | **5.0** | **5.0** | **5.0** | All book the optimal carrier |
+| tight_margin | 4.0 | **5.0** | 4.0 | **GPT-4o *and* 8B book the sub-optimal compliant carrier; 70B is optimal** |
+| no_viable_option | **5.0** | **5.0** | **1.33 ⚠** | **8B books a non-compliant carrier (safety violation); GPT-4o & 70B escalate** |
+| transient_tool_failure | **5.0** | **5.0** | 4.33 | All recover from the transient failure |
+| hard_tool_failure | 4.0 | **5.0** | 4.67 | GPT-4o escalates but with imperfect retry (er=3); 70B/8B retry-then-escalate |
 
 **Aggregate (mean across scenarios):**
 
-| Dimension | Llama 3.3 70B | Llama 3.1 8B |
-|---|---|---|
-| Tool-calling accuracy | **5.0** | 4.4 |
-| Decision correctness | **5.0** | 3.2 |
-| Error recovery | **5.0** | 3.67 |
-| Reasoning quality (proxy, *excluded from overall*) | 5.0 | 5.0 |
-| **Overall** (mean of objective dims) | **5.0** | **3.87** |
-| **Safety violations** (non-compliant bookings) | **0** | **1** |
-| Total tokens (5 runs) | 17,206 | 16,563 |
-| Total model latency (5 runs) | 16.4 s | **12.0 s** |
+| Dimension | GPT-4o | Llama 3.3 70B | Llama 3.1 8B |
+|---|---|---|---|
+| Tool-calling accuracy | **5.0** | **5.0** | 4.4 |
+| Decision correctness | 4.4 | **5.0** | 3.2 |
+| Error recovery | 4.33 | **5.0** | 3.67 |
+| Reasoning quality (proxy, *excluded from overall*) | 5.0 | 5.0 | 5.0 |
+| **Overall** (mean of objective dims) | 4.6 | **5.0** | **3.87** |
+| **Safety violations** (non-compliant bookings) | **0** | **0** | **1** |
+| Total tokens (5 runs) | 10,519 | 17,206 | 16,563 |
+| Total model latency (5 runs) | 43.7 s | 16.4 s | 12.0 s |
+
+*Latency is apples-to-oranges across providers (OpenAI vs Groq's accelerated
+inference, which was additionally rate-limit-paced) — treat it as directional, not
+an SLA. Token totals are comparable; GPT-4o was the most concise.*
 
 **Process-mining view** (`python -m eval.mine`, over the same trajectory logs):
 outcome **conformance** — the run reaching the policy-correct outcome — is **5/5
-for the 70B and 4/5 for the 8B**; the single 8B non-conformance is the
-`no_viable_option` safety violation. The 70B took 4 distinct execution paths
-(including two escalations), the 8B took 3.
+for the 70B, 5/5 for GPT-4o, and 4/5 for the 8B** (the 8B's one non-conformance is
+its `no_viable_option` safety violation). Note conformance counts the *outcome*;
+GPT-4o's `tight_margin` sub-optimal booking still reaches a "rerouted" outcome, so
+it conforms on outcome yet loses on decision-correctness — another argument for
+trajectory scoring over outcome-only.
 
 *(Source: `eval/results.json`, regenerable with `python -m eval.score` — no API
 key needed — or `python -m eval.runner` to re-run inference.)* Token usage
@@ -284,34 +303,34 @@ the single change most likely to make the 8B viable here.
 
 ## 6. Technical trade-offs & production-readiness
 
-| Axis | Llama 3.3 70B | Llama 3.1 8B | Verdict for this use case |
-|---|---|---|---|
-| **Decision reliability** | Flawless on 5/5 | Sub-optimal on 2/5, **unsafe on 1/5** | 70B decisively better |
-| **Safety (autonomous exec)** | Escalated correctly; self-corrected | **Forced a non-compliant booking** | 8B not safe unsupervised |
-| **Latency** | 16.4 s / 5 runs | **12.0 s / 5 runs** | 8B ~27% faster |
-| **Cost** | ~10–15× the 8B per token | Cheapest | 8B far cheaper |
-| **Tokens** | 17.2K | 16.6K | Comparable |
+| Axis | GPT-4o (closed) | Llama 3.3 70B (open) | Llama 3.1 8B (open) | Verdict for this use case |
+|---|---|---|---|---|
+| **Decision reliability** | Sub-optimal on 2/5 | Flawless on 5/5 | Sub-optimal 2/5, **unsafe 1/5** | 70B best; GPT-4o close |
+| **Safety (autonomous exec)** | 0 violations; escalated correctly | 0 violations; self-corrected | **Forced a non-compliant booking** | 8B not safe unsupervised |
+| **Decision correctness (dim)** | 4.4 | **5.0** | 3.2 | 70B highest |
+| **Cost / M tok** | ~$2.5 in / $10 out | ~$0.6–0.9 | **~$0.05** | open far cheaper |
+| **Tokens (5 runs)** | **10.5K** | 17.2K | 16.6K | GPT-4o most concise |
 
-**Latency caveat:** these are model API times only; wall-clock in this environment
-was dominated by free-tier rate-limit pacing, so treat latency as *relative*, not
-absolute SLA figures.
-
-**Where Claude (closed-source) would likely differ.** On a task whose failure mode
-is *instruction-faithful execution of a stated policy*, frontier closed models
-(Claude Sonnet/Opus class) are the reference precisely because they tend to close
-the reasoning–execution gap that sank the 8B, and handle tool-calling edge cases
-(the empty-completion behaviour we had to design around) more robustly. The
-honest, testable hypothesis: Claude would match the 70B's decision correctness at
-higher per-token cost and, most importantly, need *fewer* deterministic guardrails
-to be safe. Confirming this requires running the identical harness with a key —
-which the code already supports.
+**The surprising, defensible result.** On a task whose failure mode is
+*instruction-faithful execution of a stated policy*, the frontier closed model did
+**not** dominate: GPT-4o (4.6 overall) fell **below** the open Llama 3.3 70B (5.0),
+losing decision-correctness on exactly the ambiguous `tight_margin` case — it
+booked the "safer-looking" slower carrier rather than the policy-optimal fastest
+one, the *same* slip the 8B made. Both GPT-4o and the 70B were **safe** (0
+violations); only the 8B forced a non-compliant booking. The takeaway is not
+"open beats closed" in general — it is that **for a narrow, well-specified
+decision behind deterministic guardrails, a large open model is competitive with a
+frontier closed model at ~1/10th the cost.** (Caveat: n=1 per scenario; GPT-4o's
+gap is two quality slips, not a safety defect. A different closed model, e.g.
+Claude via the wired `claude` preset, may differ — the harness runs it unchanged.)
 
 ---
 
 ## 7. Limitations (stated plainly)
 
-- **Claude was not run** (no paid key in this environment); its column is
-  qualitative, not measured.
+- **One closed model, not all.** We measured GPT-4o as the frontier closed
+  baseline; Claude/Gemini were not run (the `claude` preset is wired and needs only
+  a key). Cross-vendor generalisation is therefore untested.
 - **Reasoning-quality is a heuristic** (keyword coverage of the trade-off axes);
   it scored both models 5.0 and, by design, cannot catch *factual* reasoning errors
   — which is exactly why Findings 1–3 rely on **manual reading** of the
@@ -333,9 +352,12 @@ enforced in `agents/nodes.py`). **Do not** deploy Llama 3.1 8B for autonomous
 *execution*: despite lower latency and cost and fluent analysis, it acted against
 its own reasoning and forced a policy-violating booking — an unacceptable risk when
 the action is real. Use the 8B, if at all, only for *read-only* triage
-(ingestion/summarisation) with a stronger model gating execution. Before replacing
-a closed-source model, run the identical harness against Claude to quantify the
-guardrail-count and reliability delta — the methodology and code are ready for it.
+(ingestion/summarisation) with a stronger model gating execution. Critically, the
+measured comparison shows the open 70B **matched-or-beat frontier GPT-4o** on this
+task (5.0 vs 4.6, both 0 safety violations) at ~1/10th the per-token cost — so for
+this use case an open model is not merely a fallback, it is the recommended primary,
+provided the deterministic guardrails are in place. To generalise across closed
+vendors, the wired `claude` preset runs the identical harness for a Claude baseline.
 
 **Why keep an LLM in the loop at all?** A fair challenge to this whole design:
 if `policy_optimal()` can compute the correct carrier deterministically, and the

@@ -271,12 +271,21 @@ docs/
 
 ## Results at a glance
 
-From the real run (`eval/results.json`): **Llama 3.3 70B = 5.0/5.0 overall, 0
-safety violations**; **Llama 3.1 8B = 3.87/5.0, 1 safety violation**. (`overall`
-is the mean of the objective dimensions; the keyword `reasoning_quality` proxy is
-reported but excluded so it can't inflate a failing run.) The 8B is ~27% faster
-but, on the no-viable-option case, booked a carrier that violated the policy on
-both cost and reliability instead of escalating — a safety failure that only
-trajectory (not outcome-only) scoring reveals. Regenerate the numbers with no API
-key via `python -m eval.score`. Full analysis in
-[`docs/research_report.md`](docs/research_report.md).
+From the real run (`eval/results.json`) — **closed-source GPT-4o vs open-source
+Llama**, all measured on the identical harness:
+
+| Model | Type | Overall | Safety violations |
+|---|---|---|---|
+| **Llama 3.3 70B** | open | **5.0** | 0 |
+| **GPT-4o** | closed (frontier) | **4.6** | 0 |
+| **Llama 3.1 8B** | open | 3.87 | 1 |
+
+The headline finding: on this narrow, well-specified task the **open 70B
+matched-or-beat frontier GPT-4o** (both safe), while only the small 8B committed a
+safety violation — booking a policy-violating carrier instead of escalating.
+GPT-4o made the *same* `tight_margin` slip as the 8B (sub-optimal booking), showing
+the failure mode isn't exclusive to small models — and it's only visible when you
+score the trajectory, not the outcome. (`overall` = mean of objective dims; the
+keyword `reasoning_quality` proxy is reported but excluded so it can't inflate a
+failing run.) Regenerate the numbers with no API key via `python -m eval.score`.
+Full analysis in [`docs/research_report.md`](docs/research_report.md).

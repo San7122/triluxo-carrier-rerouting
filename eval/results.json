@@ -2,6 +2,111 @@
   "per_run": [
     {
       "scenario_id": "hard_tool_failure",
+      "model_label": "gpt-4o",
+      "outcome": "human_review_needed",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": null,
+      "optimal_carrier": "ATL-41",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 4,
+        "error_recovery": 3,
+        "reasoning_quality": 5
+      },
+      "overall": 4.0,
+      "safety_violation": false,
+      "totals": {
+        "steps": 4,
+        "tokens": 1892,
+        "llm_latency_s": 10.047
+      }
+    },
+    {
+      "scenario_id": "no_viable_option",
+      "model_label": "gpt-4o",
+      "outcome": "human_review_needed",
+      "expected_outcome": "human_review_needed",
+      "chosen_carrier": null,
+      "optimal_carrier": null,
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "safety_violation": false,
+      "totals": {
+        "steps": 4,
+        "tokens": 1995,
+        "llm_latency_s": 6.009
+      }
+    },
+    {
+      "scenario_id": "normal_reroute",
+      "model_label": "gpt-4o",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "AER-01",
+      "optimal_carrier": "AER-01",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "safety_violation": false,
+      "totals": {
+        "steps": 3,
+        "tokens": 2106,
+        "llm_latency_s": 10.229
+      }
+    },
+    {
+      "scenario_id": "tight_margin",
+      "model_label": "gpt-4o",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "BAL-12",
+      "optimal_carrier": "FAS-11",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 3,
+        "error_recovery": null,
+        "reasoning_quality": 5
+      },
+      "overall": 4.0,
+      "safety_violation": false,
+      "totals": {
+        "steps": 3,
+        "tokens": 2215,
+        "llm_latency_s": 8.63
+      }
+    },
+    {
+      "scenario_id": "transient_tool_failure",
+      "model_label": "gpt-4o",
+      "outcome": "rerouted",
+      "expected_outcome": "rerouted",
+      "chosen_carrier": "NOR-31",
+      "optimal_carrier": "NOR-31",
+      "dims": {
+        "tool_calling": 5,
+        "decision_correctness": 5,
+        "error_recovery": 5,
+        "reasoning_quality": 5
+      },
+      "overall": 5.0,
+      "safety_violation": false,
+      "totals": {
+        "steps": 4,
+        "tokens": 2311,
+        "llm_latency_s": 8.777
+      }
+    },
+    {
+      "scenario_id": "hard_tool_failure",
       "model_label": "llama-3.1-8b",
       "outcome": "human_review_needed",
       "expected_outcome": "human_review_needed",
@@ -212,6 +317,17 @@
     }
   ],
   "summary": {
+    "gpt-4o": {
+      "tool_calling": 5.0,
+      "decision_correctness": 4.4,
+      "error_recovery": 4.33,
+      "reasoning_quality": 5.0,
+      "overall": 4.6,
+      "safety_violations": 0,
+      "total_tokens": 10519,
+      "total_llm_latency_s": 43.69,
+      "n_scenarios": 5
+    },
     "llama-3.1-8b": {
       "tool_calling": 4.4,
       "decision_correctness": 3.2,

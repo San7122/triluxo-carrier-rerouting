@@ -1,0 +1,185 @@
+{
+  "run_id": "63f4fda5b493",
+  "scenario_id": "normal_reroute",
+  "model_label": "gpt-4o",
+  "provider": "openai",
+  "model_id": "gpt-4o",
+  "outcome": "rerouted",
+  "final_decision": {
+    "chosen_carrier_id": "AER-01",
+    "booking": {
+      "status": "confirmed",
+      "shipment_id": "SHP-1001",
+      "carrier_id": "AER-01",
+      "new_eta_hours": 30,
+      "booking_ref": "BK-49AE3179"
+    },
+    "rationale": ""
+  },
+  "escalation_reason": "",
+  "error": "",
+  "totals": {
+    "steps": 3,
+    "tokens": 2106,
+    "llm_latency_s": 10.229
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-1001",
+        "event": "customs_delay",
+        "carrier": "BlueFreight",
+        "origin": "Shanghai",
+        "destination": "Rotterdam",
+        "commodity": "consumer_electronics",
+        "priority": "high",
+        "baseline_eta_hours": 72,
+        "eta_impact_hours": 14
+      },
+      "thought": "The shipment SHP-1001 is experiencing a customs delay, impacting the ETA by 14 hours. Given the high priority of the shipment and the significant delay, the operational severity is estimated to be high. An automated reroute should be attempted to mitigate the delay and ensure timely delivery.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-1001",
+          "event": "customs_delay",
+          "carrier": "BlueFreight",
+          "origin": "Shanghai",
+          "destination": "Rotterdam",
+          "commodity": "consumer_electronics",
+          "priority": "high",
+          "baseline_eta_hours": 72,
+          "eta_impact_hours": 14
+        },
+        "assessment": "The shipment SHP-1001 is experiencing a customs delay, impacting the ETA by 14 hours. Given the high priority of the shipment and the significant delay, the operational severity is estimated to be high. An automated reroute should be attempted to mitigate the delay and ensure timely delivery."
+      },
+      "llm_latency_s": 3.963114023208618,
+      "input_tokens": 167,
+      "output_tokens": 58
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-1001",
+        "attempt": 1
+      },
+      "thought": "Let's evaluate each option against the reroute policy:\n\n1. **AeroSwift Air (AER-01)**\n   - **Cost:** $5,200\n   - **ETA:** 30 hours\n   - **Reliability:** 0.94\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n2. **RoadRunner Express (ROA-02)**\n   - **Cost:** $2,100\n   - **ETA:** 58 hours\n   - **Reliability:** 0.9\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n3. **SeaLink Standard (SEA-03)**\n   - **Cost:** $900\n   - **ETA:** 140 hours\n   - **Reliability:** 0.97\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n**Ranking of Compliant Options:**\n1. **AeroSwift Air (AER-01)**\n   - Fastest ETA at 30 hours.\n   - High reliability at 0.94.\n   - Cost is within the limit.\n\n2. **RoadRunner Express (ROA-02)**\n   - Second fastest ETA at 58 hours.\n   - Reliability is slightly lower at 0.9.\n   - Lower cost than AeroSwift Air.\n\n3. **SeaLink Standard (SEA-03)**\n   - Slowest ETA at 140 hours.\n   - Highest reliability at 0.97.\n   - Lowest cost.\n\nAeroSwift Air (AER-01) is the top-ranked option based on the policy objective of minimizing ETA, with tie-breakers of reliability and cost.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-1001"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-1001",
+            "carriers": [
+              {
+                "carrier_id": "AER-01",
+                "name": "AeroSwift Air",
+                "mode": "air",
+                "cost_usd": 5200,
+                "eta_hours": 30,
+                "reliability": 0.94
+              },
+              {
+                "carrier_id": "ROA-02",
+                "name": "RoadRunner Express",
+                "mode": "road",
+                "cost_usd": 2100,
+                "eta_hours": 58,
+                "reliability": 0.9
+              },
+              {
+                "carrier_id": "SEA-03",
+                "name": "SeaLink Standard",
+                "mode": "sea",
+                "cost_usd": 900,
+                "eta_hours": 140,
+                "reliability": 0.97
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 3.981590270996094e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "AER-01",
+            "name": "AeroSwift Air",
+            "mode": "air",
+            "cost_usd": 5200,
+            "eta_hours": 30,
+            "reliability": 0.94
+          },
+          {
+            "carrier_id": "ROA-02",
+            "name": "RoadRunner Express",
+            "mode": "road",
+            "cost_usd": 2100,
+            "eta_hours": 58,
+            "reliability": 0.9
+          },
+          {
+            "carrier_id": "SEA-03",
+            "name": "SeaLink Standard",
+            "mode": "sea",
+            "cost_usd": 900,
+            "eta_hours": 140,
+            "reliability": 0.97
+          }
+        ],
+        "assessment": "Let's evaluate each option against the reroute policy:\n\n1. **AeroSwift Air (AER-01)**\n   - **Cost:** $5,200\n   - **ETA:** 30 hours\n   - **Reliability:** 0.94\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n2. **RoadRunner Express (ROA-02)**\n   - **Cost:** $2,100\n   - **ETA:** 58 hours\n   - **Reliability:** 0.9\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n3. **SeaLink Standard (SEA-03)**\n   - **Cost:** $900\n   - **ETA:** 140 hours\n   - **Reliability:** 0.97\n   - **Policy Compliance:** Yes, it meets the cost and reliability constraints.\n\n**Ranking of Compliant Options:**\n1. **AeroSwift Air (AER-01)**\n   - Fastest ETA at 30 hours.\n   - High reliability at 0.94.\n   - Cost is within the limit.\n\n2. **RoadRunner Express (ROA-02)**\n   - Second fastest ETA at 58 hours.\n   - Reliability is slightly lower at 0.9.\n   - Lower cost than AeroSwift Air.\n\n3. **SeaLink Standard (SEA-03)**\n   - Slowest ETA at 140 hours.\n   - Highest reliability at 0.97.\n   - Lowest cost.\n\nAeroSwift Air (AER-01) is the top-ranked option based on the policy objective of minimizing ETA, with tie-breakers of reliability and cost."
+      },
+      "llm_latency_s": 5.043132305145264,
+      "input_tokens": 938,
+      "output_tokens": 372
+    },
+    {
+      "index": 2,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 3,
+        "attempt": 1
+      },
+      "thought": "",
+      "tool_events": [
+        {
+          "name": "execute_reroute",
+          "arguments": {
+            "shipment_id": "SHP-1001",
+            "carrier_id": "AER-01"
+          },
+          "ok": true,
+          "output": {
+            "status": "confirmed",
+            "shipment_id": "SHP-1001",
+            "carrier_id": "AER-01",
+            "new_eta_hours": 30,
+            "booking_ref": "BK-49AE3179"
+          },
+          "error": null,
+          "latency_s": 0.00036597251892089844
+        }
+      ],
+      "output": {
+        "chosen_carrier_id": "AER-01",
+        "booking": {
+          "status": "confirmed",
+          "shipment_id": "SHP-1001",
+          "carrier_id": "AER-01",
+          "new_eta_hours": 30,
+          "booking_ref": "BK-49AE3179"
+        },
+        "rationale": ""
+      },
+      "llm_latency_s": 1.2230210304260254,
+      "input_tokens": 542,
+      "output_tokens": 29
+    }
+  ]
+}

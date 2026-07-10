@@ -324,12 +324,42 @@ class LMStudioClient(GroqClient):
         self._rate_limit = False  # local server, no TPM cap
 
 
+# ---------------------------------------------------------------------------
+# OpenAI (closed-source frontier) -- GPT-4o etc., real api.openai.com
+# ---------------------------------------------------------------------------
+class OpenAIClient(GroqClient):
+    """Closed-source frontier model via the real OpenAI API.
+
+    Reuses GroqClient's OpenAI message/tool translation and `chat`; only the
+    endpoint (default api.openai.com) and key change, and the Groq TPM limiter is
+    off (OpenAI has its own, higher, account-level limits + a 429 backoff remains).
+
+    Env:
+      OPENAI_API_KEY   required
+      OPENAI_MODEL     default gpt-4o
+    """
+    provider = "openai"
+
+    def __init__(self, model_id: Optional[str] = None, label: Optional[str] = None):
+        from openai import OpenAI
+
+        self.model_id = model_id or os.environ.get("OPENAI_MODEL", "gpt-4o")
+        self.label = label or f"openai:{self.model_id}"
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY not set -- cannot run the closed-source model.")
+        self._client = OpenAI(api_key=api_key)  # defaults to https://api.openai.com/v1
+        self._rate_limit = False  # rely on OpenAI account limits + 429 backoff
+
+
 def build_client(kind: str, model_id: Optional[str] = None,
                  label: Optional[str] = None) -> LLMClient:
-    """Factory used by the runner. kind in {'claude','groq','lmstudio'}."""
+    """Factory used by the runner. kind in {'claude','openai','groq','lmstudio'}."""
     kind = kind.lower()
     if kind in ("claude", "anthropic"):
         return AnthropicClient(model_id=model_id, label=label)
+    if kind in ("openai", "gpt"):
+        return OpenAIClient(model_id=model_id, label=label)
     if kind in ("groq", "llama", "qwen", "oss"):
         return GroqClient(model_id=model_id, label=label)
     if kind in ("lmstudio", "lm-studio", "local"):

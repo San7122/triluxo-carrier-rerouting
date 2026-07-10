@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+
+# subset/multi-trial run outputs (canonical live in results.json / trajectories.jsonl)
+eval/*.partial.json
+eval/trajectories/*.partial.jsonl

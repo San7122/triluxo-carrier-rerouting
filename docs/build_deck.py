@@ -209,11 +209,13 @@ notes(s, "This is the heart of the technical contribution, explained for non-tec
 # =====================================================================
 # Slide 5 — Head-to-head results (chart)
 # =====================================================================
-s = content_slide("Head-to-head: the big model was flawless; the small one wasn't", kicker="Results")
+s = content_slide("Closed vs open: the open 70B matched the frontier model — and was safer than the small one",
+                  kicker="Results")
 chart_data = CategoryChartData()
 chart_data.categories = ["Tool use", "Decision\ncorrectness", "Error\nrecovery", "Overall"]
-chart_data.add_series("Llama 3.3 70B", (5.0, 5.0, 5.0, 5.0))
-chart_data.add_series("Llama 3.1 8B", (4.4, 3.2, 3.67, 3.87))
+chart_data.add_series("Llama 3.3 70B (open)", (5.0, 5.0, 5.0, 5.0))
+chart_data.add_series("GPT-4o (closed)", (5.0, 4.4, 4.33, 4.6))
+chart_data.add_series("Llama 3.1 8B (open)", (4.4, 3.2, 3.67, 3.87))
 gf = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
                         Inches(0.75), Inches(2.15), Inches(7.7), Inches(4.7), chart_data)
 chart = gf.chart
@@ -225,18 +227,20 @@ chart.legend.position = XL_LEGEND_POSITION.BOTTOM
 chart.legend.include_in_layout = False
 plot = chart.plots[0]
 plot.series[0].format.fill.solid(); plot.series[0].format.fill.fore_color.rgb = TEAL
-plot.series[1].format.fill.solid(); plot.series[1].format.fill.fore_color.rgb = AMBER
-textbox(s, Inches(8.8), Inches(2.4), Inches(4.1), Inches(4.2), [
-    ("Scores are 1–5, averaged over 5 disruption scenarios.", {"size": 14, "bold": True, "color": NAVY}),
-    ("70B: 5.0 overall, 0 safety violations — correct on every scenario.", {"size": 14, "color": INK}),
-    ("8B: 3.87 overall, 1 safety violation — fluent, but stumbled where it matters.", {"size": 14, "color": INK}),
-    ("(Overall = objective dims only; a keyword reasoning proxy is excluded so it can't inflate a failing run.)", {"size": 11, "color": GREY}),
-    ("8B's edge: ~27% faster and far cheaper per token.", {"size": 14, "color": GREY}),
-], space_after=12)
-notes(s, "The 70B is a clean sweep. The 8B looks respectable on average (3.87) — which is exactly the "
-         "trap. The average hides that its losses are concentrated in decision correctness and error "
-         "recovery, the two dimensions that govern whether it's safe to let it act. Next slide shows "
-         "the specific failure.")
+plot.series[1].format.fill.solid(); plot.series[1].format.fill.fore_color.rgb = NAVY
+plot.series[2].format.fill.solid(); plot.series[2].format.fill.fore_color.rgb = AMBER
+textbox(s, Inches(8.8), Inches(2.4), Inches(4.1), Inches(4.4), [
+    ("1–5, averaged over 5 disruption scenarios. Safety violations in ().", {"size": 13, "bold": True, "color": NAVY}),
+    ("Llama 3.3 70B: 5.0 (0) — best overall.", {"size": 13.5, "color": INK}),
+    ("GPT-4o closed: 4.6 (0) — safe, but 2 sub-optimal calls.", {"size": 13.5, "color": INK}),
+    ("Llama 3.1 8B: 3.87 (1) — the only safety violation.", {"size": 13.5, "color": INK}),
+    ("The open 70B matched the frontier model at ~1/10th the cost.", {"size": 13.5, "bold": True, "color": RGBColor(0x1B,0x77,0x6B)}),
+], space_after=10)
+notes(s, "The headline: we ran a real frontier closed model (GPT-4o) against the open Llamas on the "
+         "identical harness. GPT-4o was safe (0 violations) but not flawless — it lost decision points "
+         "on the ambiguous tight-margin case, the SAME slip the 8B made. The open 70B was the single "
+         "best performer with zero violations, at a fraction of the cost. So for this narrow, "
+         "well-specified task, an open model is not a fallback — it's the recommended primary.")
 
 # =====================================================================
 # Slide 6 — The critical finding
@@ -265,15 +269,15 @@ notes(s, "This is the money slide. The 8B doesn't fail by being confused — it 
 # =====================================================================
 # Slide 7 — Recommendation (direct)
 # =====================================================================
-s = content_slide("Is an open model ready to replace a closed one here? Not yet — but one is close",
+s = content_slide("Is an open model ready to replace a closed one here? For this task — yes",
                   kicker="The recommendation")
 # two columns
 c1 = rect(s, Inches(0.75), Inches(2.15), Inches(5.75), Inches(4.5), RGBColor(0xEA,0xF6,0xF4))
 c2 = rect(s, Inches(6.8), Inches(2.15), Inches(5.75), Inches(4.5), RGBColor(0xFB,0xF0,0xDE))
 textbox(s, Inches(1.0), Inches(2.4), Inches(5.3), Inches(4.1), [
-    ("✔ Llama 3.3 70B — conditional YES", {"size": 18, "bold": True, "color": RGBColor(0x1B,0x77,0x6B)}),
+    ("✔ Llama 3.3 70B — YES (recommended primary)", {"size": 17, "bold": True, "color": RGBColor(0x1B,0x77,0x6B)}),
+    ("Beat frontier GPT-4o (5.0 vs 4.6), 0 safety violations, ~1/10th the cost.", {"size": 14, "color": INK}),
     ("Deploy as the reasoning engine BEHIND a deterministic policy guardrail.", {"size": 14, "color": INK}),
-    ("Flawless decisions + correct escalation in testing.", {"size": 14, "color": INK}),
     ("Guardrail already blocks non-compliant / un-offered bookings.", {"size": 14, "color": INK}),
 ], space_after=12)
 textbox(s, Inches(7.05), Inches(2.4), Inches(5.3), Inches(4.1), [

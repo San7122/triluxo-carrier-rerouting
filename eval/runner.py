@@ -54,6 +54,7 @@ PRESETS: dict[str, tuple[str, str | None, str]] = {
     "llama8b": ("groq", "llama-3.1-8b-instant", "llama-3.1-8b"),
     "qwen32b": ("groq", "qwen-2.5-32b", "qwen2.5-32b"),
     "claude": ("claude", None, "claude"),
+    "gpt4o": ("openai", "gpt-4o", "gpt-4o"),
     # Local open model via LM Studio. model_id=None -> uses $LMSTUDIO_MODEL.
     "lmstudio": ("lmstudio", None, "lmstudio-local"),
 }
@@ -62,7 +63,8 @@ DEFAULT_MODELS = ["llama70b", "llama8b"]
 
 def _key_for(kind: str) -> str | None:
     # None => no API key required (e.g. a local LM Studio server).
-    return {"groq": "GROQ_API_KEY", "claude": "ANTHROPIC_API_KEY"}.get(kind)
+    return {"groq": "GROQ_API_KEY", "claude": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY"}.get(kind)
 
 
 def load_scenarios(only: str | None = None) -> list[dict]:

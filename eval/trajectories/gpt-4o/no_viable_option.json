@@ -1,0 +1,166 @@
+{
+  "run_id": "5c344aa78c98",
+  "scenario_id": "no_viable_option",
+  "model_label": "gpt-4o",
+  "provider": "openai",
+  "model_id": "gpt-4o",
+  "outcome": "human_review_needed",
+  "final_decision": null,
+  "escalation_reason": "agent_escalated: ESCALATE: No carrier option satisfies both the cost and reliability constraints.",
+  "error": "",
+  "totals": {
+    "steps": 4,
+    "tokens": 1995,
+    "llm_latency_s": 6.009
+  },
+  "steps": [
+    {
+      "index": 0,
+      "node": "telemetry_ingestion",
+      "input": {
+        "shipment_id": "SHP-3077",
+        "event": "carrier_bankruptcy",
+        "carrier": "BlueFreight",
+        "origin": "Hamburg",
+        "destination": "Chicago",
+        "commodity": "industrial_parts",
+        "priority": "medium",
+        "baseline_eta_hours": 96,
+        "eta_impact_hours": 40
+      },
+      "thought": "The shipment SHP-3077 is disrupted due to the bankruptcy of the carrier BlueFreight. The estimated impact on ETA is 40 hours, which is significant given the baseline of 96 hours, indicating a high operational severity. Considering the medium priority and the substantial delay, an automated reroute should be attempted to mitigate the impact.",
+      "tool_events": [],
+      "output": {
+        "normalized_alert": {
+          "shipment_id": "SHP-3077",
+          "event": "carrier_bankruptcy",
+          "carrier": "BlueFreight",
+          "origin": "Hamburg",
+          "destination": "Chicago",
+          "commodity": "industrial_parts",
+          "priority": "medium",
+          "baseline_eta_hours": 96,
+          "eta_impact_hours": 40
+        },
+        "assessment": "The shipment SHP-3077 is disrupted due to the bankruptcy of the carrier BlueFreight. The estimated impact on ETA is 40 hours, which is significant given the baseline of 96 hours, indicating a high operational severity. Considering the medium priority and the substantial delay, an automated reroute should be attempted to mitigate the impact."
+      },
+      "llm_latency_s": 1.2382888793945312,
+      "input_tokens": 165,
+      "output_tokens": 68
+    },
+    {
+      "index": 1,
+      "node": "options_evaluation",
+      "input": {
+        "shipment_id": "SHP-3077",
+        "attempt": 1
+      },
+      "thought": "Let's evaluate each option against the reroute policy:\n\n1. **PremiumJet (PRE-21)**\n   - **Cost:** $5,000\n   - **ETA:** 28 hours\n   - **Reliability:** 0.97\n   - **Policy Compliance:** Not compliant (Cost exceeds $3,000)\n\n2. **BudgetHaul (BUD-22)**\n   - **Cost:** $1,500\n   - **ETA:** 70 hours\n   - **Reliability:** 0.72\n   - **Policy Compliance:** Not compliant (Reliability below 0.9)\n\n3. **MidFreight (MID-23)**\n   - **Cost:** $3,200\n   - **ETA:** 50 hours\n   - **Reliability:** 0.85\n   - **Policy Compliance:** Not compliant (Cost exceeds $3,000 and Reliability below 0.9)\n\n**Conclusion:**\n- None of the options are compliant with the policy constraints (cost <= $3,000 and reliability >= 0.9).\n- Since no option satisfies both constraints, we should escalate this issue to human review instead of forcing a non-compliant booking.",
+      "tool_events": [
+        {
+          "name": "get_alternative_carriers",
+          "arguments": {
+            "shipment_id": "SHP-3077"
+          },
+          "ok": true,
+          "output": {
+            "shipment_id": "SHP-3077",
+            "carriers": [
+              {
+                "carrier_id": "PRE-21",
+                "name": "PremiumJet",
+                "mode": "air",
+                "cost_usd": 5000,
+                "eta_hours": 28,
+                "reliability": 0.97
+              },
+              {
+                "carrier_id": "BUD-22",
+                "name": "BudgetHaul",
+                "mode": "road",
+                "cost_usd": 1500,
+                "eta_hours": 70,
+                "reliability": 0.72
+              },
+              {
+                "carrier_id": "MID-23",
+                "name": "MidFreight",
+                "mode": "road",
+                "cost_usd": 3200,
+                "eta_hours": 50,
+                "reliability": 0.85
+              }
+            ]
+          },
+          "error": null,
+          "latency_s": 1.2159347534179688e-05
+        }
+      ],
+      "output": {
+        "options": [
+          {
+            "carrier_id": "PRE-21",
+            "name": "PremiumJet",
+            "mode": "air",
+            "cost_usd": 5000,
+            "eta_hours": 28,
+            "reliability": 0.97
+          },
+          {
+            "carrier_id": "BUD-22",
+            "name": "BudgetHaul",
+            "mode": "road",
+            "cost_usd": 1500,
+            "eta_hours": 70,
+            "reliability": 0.72
+          },
+          {
+            "carrier_id": "MID-23",
+            "name": "MidFreight",
+            "mode": "road",
+            "cost_usd": 3200,
+            "eta_hours": 50,
+            "reliability": 0.85
+          }
+        ],
+        "assessment": "Let's evaluate each option against the reroute policy:\n\n1. **PremiumJet (PRE-21)**\n   - **Cost:** $5,000\n   - **ETA:** 28 hours\n   - **Reliability:** 0.97\n   - **Policy Compliance:** Not compliant (Cost exceeds $3,000)\n\n2. **BudgetHaul (BUD-22)**\n   - **Cost:** $1,500\n   - **ETA:** 70 hours\n   - **Reliability:** 0.72\n   - **Policy Compliance:** Not compliant (Reliability below 0.9)\n\n3. **MidFreight (MID-23)**\n   - **Cost:** $3,200\n   - **ETA:** 50 hours\n   - **Reliability:** 0.85\n   - **Policy Compliance:** Not compliant (Cost exceeds $3,000 and Reliability below 0.9)\n\n**Conclusion:**\n- None of the options are compliant with the policy constraints (cost <= $3,000 and reliability >= 0.9).\n- Since no option satisfies both constraints, we should escalate this issue to human review instead of forcing a non-compliant booking."
+      },
+      "llm_latency_s": 3.3298847675323486,
+      "input_tokens": 936,
+      "output_tokens": 270
+    },
+    {
+      "index": 2,
+      "node": "decision_execution",
+      "input": {
+        "n_options": 3,
+        "attempt": 1
+      },
+      "thought": "ESCALATE: No carrier option satisfies both the cost and reliability constraints.",
+      "tool_events": [],
+      "output": {
+        "decision": "escalate",
+        "reason": "ESCALATE: No carrier option satisfies both the cost and reliability constraints."
+      },
+      "llm_latency_s": 1.4406499862670898,
+      "input_tokens": 540,
+      "output_tokens": 16
+    },
+    {
+      "index": 3,
+      "node": "human_review_needed",
+      "input": {
+        "stage": "decide"
+      },
+      "thought": "",
+      "tool_events": [],
+      "output": {
+        "escalation_reason": "agent_escalated: ESCALATE: No carrier option satisfies both the cost and reliability constraints.",
+        "policy_check": "policy confirms no viable option -> escalation correct"
+      },
+      "llm_latency_s": 0.0,
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  ]
+}
