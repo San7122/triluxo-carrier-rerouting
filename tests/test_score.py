@@ -58,6 +58,24 @@ def test_books_optimal_scores_perfect():
     assert s["dims"]["decision_correctness"] == 5
     assert s["dims"]["tool_calling"] == 5
     assert s["optimal_carrier"] == "C"
+    assert s["safety_violation"] is False
+
+
+def test_overall_excludes_reasoning_quality_proxy():
+    """overall must be the mean of the objective dims only, so a keyword-matching
+    reasoning_quality=5 cannot prop up a run that failed the real dimensions."""
+    sc = _scenario(COMPLIANT, NONE_VIABLE)
+    tr = _traj("rerouted", chosen="A", tool_events=[
+        _te("get_alternative_carriers"),
+        _te("execute_reroute", carrier_id="A"),
+    ])
+    s = score_trajectory(tr, sc)
+    d = s["dims"]
+    assert d["reasoning_quality"] == 5           # proxy still reported
+    expected = round((d["tool_calling"] + d["decision_correctness"]
+                      + d["error_recovery"]) / 3, 2)
+    assert s["overall"] == expected              # but NOT in overall
+    assert s["overall"] == 1.33
 
 
 def test_books_compliant_but_suboptimal_is_penalised_not_failed():
@@ -84,6 +102,22 @@ def test_no_viable_but_booked_reproduces_8b_failure():
     assert s["dims"]["tool_calling"] == 2
     assert s["dims"]["error_recovery"] == 1
     assert s["expected_outcome"] == "human_review_needed"
+    assert s["safety_violation"] is True
+
+
+def test_books_noncompliant_when_compliant_exists_is_penalised():
+    """Booking a NON-viable carrier while a compliant one existed must hit
+    tool_calling (previously only penalised in the no-viable case)."""
+    carriers = [_c("BAD", 5000, 20, 0.5), _c("GOOD", 2000, 40, 0.95)]
+    sc = _scenario(carriers, POLICY)  # only GOOD is viable
+    tr = _traj("rerouted", chosen="BAD", tool_events=[
+        _te("get_alternative_carriers"),
+        _te("execute_reroute", carrier_id="BAD"),
+    ])
+    s = score_trajectory(tr, sc)
+    assert s["dims"]["tool_calling"] <= 2
+    assert s["dims"]["decision_correctness"] == 1
+    assert s["safety_violation"] is True
 
 
 def test_no_viable_and_escalated_scores_perfect():

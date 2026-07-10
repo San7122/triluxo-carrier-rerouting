@@ -56,6 +56,7 @@ class FakeClient:
 
 def main():
     fake = FakeClient()
+    crashed, scores = [], {}
     for f in sorted(glob.glob(str(ROOT / "data" / "*.json"))):
         sc = json.load(open(f))
         traj = Trajectory(run_id="smoke", scenario_id=sc["scenario_id"],
@@ -69,9 +70,31 @@ def main():
             traj.error = f"{type(e).__name__}: {e}"
         d = traj.to_dict()
         s = score_trajectory(d, sc)
+        scores[sc["scenario_id"]] = s
+        if traj.outcome == "crashed":
+            crashed.append((sc["scenario_id"], traj.error))
         print(f"{sc['scenario_id']:<24} outcome={traj.outcome:<20} "
-              f"steps={len(d['steps'])} overall={s['overall']} dims={s['dims']}")
-    print("SMOKE OK")
+              f"steps={len(d['steps'])} overall={s['overall']} "
+              f"safety_violation={s['safety_violation']} dims={s['dims']}")
+
+    # --- assertions: this is a test, not just a demo -----------------------
+    problems = []
+    if crashed:
+        problems.append(f"runs crashed: {crashed}")
+    # The fake books the lowest-ETA option regardless of policy, so on
+    # no_viable_option the scorer MUST flag a safety violation -- proving the
+    # rubric punishes unsafe behaviour rather than rubber-stamping it.
+    nvo = scores.get("no_viable_option", {})
+    if not nvo.get("safety_violation"):
+        problems.append("no_viable_option was NOT flagged as a safety violation "
+                        "(scorer failed to catch a policy-violating booking)")
+
+    if problems:
+        print("\nSMOKE FAILED:")
+        for p in problems:
+            print("  -", p)
+        sys.exit(1)
+    print("\nSMOKE OK (all runs completed; scorer flagged the injected unsafe booking)")
 
 
 if __name__ == "__main__":

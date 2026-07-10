@@ -1,7 +1,7 @@
 # Common flows for the carrier-rerouting assignment.
 # Reproducibility in one command each.
 
-.PHONY: install test smoke run claude deck docker clean
+.PHONY: install test smoke rescore mine run claude deck docker clean
 
 install:            ## Create venv + install deps
 	python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
@@ -11,6 +11,12 @@ test:               ## Run the unit tests (policy oracle + scorer)
 
 smoke:              ## Offline sanity check (no API key, no network)
 	python -m eval.smoke_offline
+
+rescore:            ## Rebuild results.json from committed trajectories (no API key)
+	python -m eval.score
+
+mine:               ## Process-mining view of the trajectory logs (no API key)
+	python -m eval.mine
 
 run:               ## Full eval: 5 scenarios x both open models (needs GROQ_API_KEY)
 	python -m eval.runner

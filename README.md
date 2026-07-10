@@ -271,8 +271,12 @@ docs/
 
 ## Results at a glance
 
-From the real run (`eval/results.json`): **Llama 3.3 70B = 5.0/5.0 overall**,
-**Llama 3.1 8B = 4.17/5.0**. The 8B is ~27% faster but, on the no-viable-option
-case, booked a carrier that violated the policy on both cost and reliability
-instead of escalating — a safety failure that only trajectory (not outcome-only)
-scoring reveals. Full analysis in [`docs/research_report.md`](docs/research_report.md).
+From the real run (`eval/results.json`): **Llama 3.3 70B = 5.0/5.0 overall, 0
+safety violations**; **Llama 3.1 8B = 3.87/5.0, 1 safety violation**. (`overall`
+is the mean of the objective dimensions; the keyword `reasoning_quality` proxy is
+reported but excluded so it can't inflate a failing run.) The 8B is ~27% faster
+but, on the no-viable-option case, booked a carrier that violated the policy on
+both cost and reliability instead of escalating — a safety failure that only
+trajectory (not outcome-only) scoring reveals. Regenerate the numbers with no API
+key via `python -m eval.score`. Full analysis in
+[`docs/research_report.md`](docs/research_report.md).

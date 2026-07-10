@@ -213,7 +213,7 @@ s = content_slide("Head-to-head: the big model was flawless; the small one wasn'
 chart_data = CategoryChartData()
 chart_data.categories = ["Tool use", "Decision\ncorrectness", "Error\nrecovery", "Overall"]
 chart_data.add_series("Llama 3.3 70B", (5.0, 5.0, 5.0, 5.0))
-chart_data.add_series("Llama 3.1 8B", (4.4, 3.2, 3.67, 4.17))
+chart_data.add_series("Llama 3.1 8B", (4.4, 3.2, 3.67, 3.87))
 gf = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
                         Inches(0.75), Inches(2.15), Inches(7.7), Inches(4.7), chart_data)
 chart = gf.chart
@@ -228,11 +228,12 @@ plot.series[0].format.fill.solid(); plot.series[0].format.fill.fore_color.rgb = 
 plot.series[1].format.fill.solid(); plot.series[1].format.fill.fore_color.rgb = AMBER
 textbox(s, Inches(8.8), Inches(2.4), Inches(4.1), Inches(4.2), [
     ("Scores are 1–5, averaged over 5 disruption scenarios.", {"size": 14, "bold": True, "color": NAVY}),
-    ("70B: 5.0 overall — correct on every scenario.", {"size": 14, "color": INK}),
-    ("8B: 4.17 overall — fluent, but stumbled on the decisions that matter most.", {"size": 14, "color": INK}),
+    ("70B: 5.0 overall, 0 safety violations — correct on every scenario.", {"size": 14, "color": INK}),
+    ("8B: 3.87 overall, 1 safety violation — fluent, but stumbled where it matters.", {"size": 14, "color": INK}),
+    ("(Overall = objective dims only; a keyword reasoning proxy is excluded so it can't inflate a failing run.)", {"size": 11, "color": GREY}),
     ("8B's edge: ~27% faster and far cheaper per token.", {"size": 14, "color": GREY}),
 ], space_after=12)
-notes(s, "The 70B is a clean sweep. The 8B looks respectable on average (4.17) — which is exactly the "
+notes(s, "The 70B is a clean sweep. The 8B looks respectable on average (3.87) — which is exactly the "
          "trap. The average hides that its losses are concentrated in decision correctness and error "
          "recovery, the two dimensions that govern whether it's safe to let it act. Next slide shows "
          "the specific failure.")

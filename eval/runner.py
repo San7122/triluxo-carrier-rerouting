@@ -123,9 +123,13 @@ def safe(label: str) -> str:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", default=None,
-                    help="presets to run: llama70b llama8b qwen32b claude "
+                    help="presets to run: llama70b llama8b qwen32b claude lmstudio "
                          "(default: llama70b llama8b)")
     ap.add_argument("--scenario", default=None, help="run only this scenario_id")
+    ap.add_argument("--trials", type=int, default=1,
+                    help="repeat each (model x scenario) N times for variance "
+                         "(default 1). Hosted inference is not bit-deterministic even "
+                         "at temp 0, so >1 gives a real spread.")
     args = ap.parse_args()
 
     scenarios = load_scenarios(args.scenario)
@@ -134,10 +138,24 @@ def main():
         print("No usable models (no API keys). Set ANTHROPIC_API_KEY and/or GROQ_API_KEY.")
         sys.exit(1)
 
+    # Only a FULL, single-trial default run may overwrite the committed canonical
+    # artifacts. A subset/multi-trial run writes to *.partial.* so it can never
+    # silently destroy the checked-in benchmark evidence.
+    is_canonical = args.scenario is None and args.models is None and args.trials == 1
+    if is_canonical:
+        jsonl_path = TRAJ_DIR / "trajectories.jsonl"
+        results_path = ROOT / "eval" / "results.json"
+    else:
+        jsonl_path = TRAJ_DIR / "trajectories.partial.jsonl"
+        results_path = ROOT / "eval" / "results.partial.json"
+        log.warning("Subset/multi-trial run: writing to %s and %s (canonical files "
+                    "untouched). Use `python -m eval.score` to rebuild results.json "
+                    "from all committed trajectories.", results_path.name, jsonl_path.name)
+
     TRAJ_DIR.mkdir(parents=True, exist_ok=True)
-    jsonl_path = TRAJ_DIR / "trajectories.jsonl"
     all_scores = []
-    print(f"Running {len(scenarios)} scenarios x {len(models)} model(s): {models}\n")
+    print(f"Running {len(scenarios)} scenarios x {len(models)} model(s) x "
+          f"{args.trials} trial(s): {models}\n")
 
     with open(jsonl_path, "w") as jsonl:
         for m in models:
@@ -146,34 +164,36 @@ def main():
             print(f"=== MODEL: {client.label} ===")
             (TRAJ_DIR / safe(client.label)).mkdir(parents=True, exist_ok=True)
             for sc in scenarios:
-                traj = run_one(client, sc)
-                d = traj.to_dict()
-                out = TRAJ_DIR / safe(client.label) / f"{sc['scenario_id']}.json"
-                with open(out, "w") as fh:
-                    json.dump(d, fh, indent=2)
-                jsonl.write(json.dumps(d) + "\n")
+                for trial in range(args.trials):
+                    traj = run_one(client, sc)
+                    d = traj.to_dict()
+                    suffix = "" if args.trials == 1 else f".t{trial + 1}"
+                    out = TRAJ_DIR / safe(client.label) / f"{sc['scenario_id']}{suffix}.json"
+                    with open(out, "w") as fh:
+                        json.dump(d, fh, indent=2)
+                    jsonl.write(json.dumps(d) + "\n")
 
-                sc_score = score_trajectory(d, sc)
-                all_scores.append(sc_score)
-                dims = sc_score["dims"]
-                print(f"  {sc['scenario_id']:<24} outcome={traj.outcome:<20} "
-                      f"overall={sc_score['overall']}  "
-                      f"tc={dims['tool_calling']} dc={dims['decision_correctness']} "
-                      f"er={dims['error_recovery']} rq={dims['reasoning_quality']}")
+                    sc_score = score_trajectory(d, sc)
+                    all_scores.append(sc_score)
+                    dims = sc_score["dims"]
+                    print(f"  {sc['scenario_id']:<24}{suffix:<4} outcome={traj.outcome:<20} "
+                          f"overall={sc_score['overall']}  "
+                          f"tc={dims['tool_calling']} dc={dims['decision_correctness']} "
+                          f"er={dims['error_recovery']} rq={dims['reasoning_quality']}")
             print()
 
     summary = aggregate(all_scores)
     results = {"per_run": all_scores, "summary": summary}
-    with open(ROOT / "eval" / "results.json", "w") as fh:
+    with open(results_path, "w") as fh:
         json.dump(results, fh, indent=2)
 
     print("=== AGGREGATE SUMMARY ===")
     for model, s in summary.items():
         print(f"{model}: overall={s['overall']}  tool={s['tool_calling']} "
               f"decision={s['decision_correctness']} recovery={s['error_recovery']} "
-              f"reasoning={s['reasoning_quality']}  tokens={s['total_tokens']} "
-              f"latency={s['total_llm_latency_s']}s")
-    print(f"\nWrote {ROOT / 'eval' / 'results.json'} and {jsonl_path}")
+              f"reasoning={s['reasoning_quality']}  safety_violations={s['safety_violations']}  "
+              f"tokens={s['total_tokens']} latency={s['total_llm_latency_s']}s")
+    print(f"\nWrote {results_path} and {jsonl_path}")
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ live client is a localized change.
 """
 from __future__ import annotations
 
-import random
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -90,7 +90,10 @@ class SimulatedCarrierNetwork:
         carriers = self.sim.get("get_alternative_carriers", {}).get("carriers", [])
         match = next((c for c in carriers if c.get("carrier_id") == carrier_id), None)
         new_eta = match.get("eta_hours") if match else None
-        booking_ref = "BK-" + "".join(random.choices("0123456789ABCDEF", k=8))
+        # Deterministic booking reference so trajectory artifacts are byte-stable
+        # across runs (the file docstring promises reproducible runs).
+        digest = hashlib.sha1(f"{shipment_id}:{carrier_id}:{n}".encode()).hexdigest()
+        booking_ref = "BK-" + digest[:8].upper()
         return {
             "status": "confirmed",
             "shipment_id": shipment_id,

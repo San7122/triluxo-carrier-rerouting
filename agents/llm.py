@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -27,10 +28,12 @@ from typing import Any, Optional
 # A leaky/token bucket paces requests *smoothly under* the per-minute token budget
 # so we essentially never trip a 429 (far more stable than reacting to 429s after
 # the fact). The bucket is module-global because the TPM limit is per-organization
-# (shared across models). Set GROQ_TPM_LIMIT to raise it on a paid tier.
+# (shared across models). A lock makes it safe to parallelise runs across threads
+# (the obvious scaling move for a fleet eval). Set GROQ_TPM_LIMIT to raise it.
 _TPM_LIMIT = int(os.environ.get("GROQ_TPM_LIMIT", "5000"))
 _RATE = _TPM_LIMIT / 60.0  # tokens refilled per second
 _bucket = {"tokens": float(_TPM_LIMIT), "last": time.time()}
+_bucket_lock = threading.Lock()
 
 
 def _bucket_refill() -> None:
@@ -42,17 +45,22 @@ def _bucket_refill() -> None:
 def _tpm_acquire(estimated_tokens: int) -> None:
     """Reserve `estimated_tokens`, sleeping just enough to stay under budget."""
     est = min(estimated_tokens, _TPM_LIMIT)
-    _bucket_refill()
-    if _bucket["tokens"] < est:
-        time.sleep((est - _bucket["tokens"]) / _RATE)
+    with _bucket_lock:
         _bucket_refill()
-    _bucket["tokens"] -= est
+        if _bucket["tokens"] < est:
+            wait = (est - _bucket["tokens"]) / _RATE
+        else:
+            wait = 0.0
+        _bucket["tokens"] -= est  # reserve now; release the lock before sleeping
+    if wait > 0:
+        time.sleep(wait)
 
 
 def _tpm_reconcile(estimated_tokens: int, actual_tokens: int) -> None:
     """Return over-reserved credit (or debit the extra) once true usage is known."""
-    _bucket["tokens"] = max(-_TPM_LIMIT, min(_TPM_LIMIT,
-                            _bucket["tokens"] + (estimated_tokens - actual_tokens)))
+    with _bucket_lock:
+        _bucket["tokens"] = max(-_TPM_LIMIT, min(_TPM_LIMIT,
+                                _bucket["tokens"] + (estimated_tokens - actual_tokens)))
 
 
 @dataclass
